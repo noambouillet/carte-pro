@@ -2,9 +2,11 @@ name: safety
 
 on:
   push:
-    branches: main
+    branches:
+      - main
   pull_request:
-    branches: main
+    branches:
+      - main
 
 env:
   MIRROR_URL: git@github.com:EpitechPGE3-2026/G-SVR-500-LIL-5-1-survivor-10.git
@@ -18,31 +20,29 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       is_mirror: ${{ steps.detect.outputs.is_mirror }}
+
     steps:
-      - name: Detect mirror repo or ignored branch
+      - name: Detect mirror repository
         id: detect
         run: |
-          repo_ssh_url="git@github.com:${{ github.repository }}.git"
+          repo_ssh_url="git@github.com:${GITHUB_REPOSITORY}.git"
           is_mirror=false
 
-          if [ "$repo_ssh_url" = "${{ env.MIRROR_URL }}" ]; then
-            is_mirror=true
-          fi
-
-          branch_name="${GITHUB_REF#refs/heads/}"
-          if echo "$branch_name" | grep -q '^ga-ignore-'; then
+          if [ "$repo_ssh_url" = "$MIRROR_URL" ]; then
             is_mirror=true
           fi
 
           echo "is_mirror=$is_mirror" >> "$GITHUB_OUTPUT"
 
   push_to_mirror:
-    needs: [check_repo]
+    needs: check_repo
     if: needs.check_repo.outputs.is_mirror == 'false' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
