@@ -1,0 +1,25 @@
+/* Styles for Create.tsx */
+
+.field-hint,
+.field-error {
+  margin: 10px 0 0;
+  font-size: 0.94rem;
+}
+
+.field-hint {
+  color: var(--text-muted);
+}
+
+.field-error {
+  font-weight: 700;
+  color: #ce0500;
+}
+
+.field-group input[aria-invalid='true'] {
+  border-color: #ce0500;
+  box-shadow: inset 0 0 0 1px #ce0500;
+}
+
+.secondary-button-spaced {
+  margin-top: 16px;
+}
