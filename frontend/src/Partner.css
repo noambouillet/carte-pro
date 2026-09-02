@@ -1,0 +1,287 @@
+.dash-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 34px;
+  padding: 0 32px;
+  background: #fff;
+  border-bottom: 1px solid var(--divider);
+}
+
+.dash-tab {
+  padding: 18px 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dash-tab-active {
+  border-bottom-color: var(--primary);
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.dash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.segmented {
+  display: flex;
+}
+
+.segment {
+  min-width: 76px;
+  padding: 12px 18px;
+  border: 1px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.segment + .segment {
+  border-left: 0;
+}
+
+.segment-active {
+  /* The selected segment stands out with a double stroke, not a fill. */
+  border: 2px solid var(--primary);
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin: 34px 0 0;
+}
+
+.kpi-card {
+  padding: 24px 26px 26px;
+  background: #fff;
+  border: 1px solid #e4e4e6;
+}
+
+.kpi-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  margin: 14px 0 0;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.kpi-hint {
+  margin: 12px 0 0;
+  font-size: 0.94rem;
+  color: var(--text-muted);
+}
+
+.chart-card {
+  margin: 0;
+  padding: 26px 28px 30px;
+  background: #fff;
+  border: 1px solid #e4e4e6;
+}
+
+.chart-card figcaption h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.chart-card figcaption p {
+  margin: 8px 0 0;
+  font-size: 0.94rem;
+  color: var(--text-muted);
+}
+
+.chart {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+  height: 320px;
+  margin-top: 34px;
+}
+
+.chart-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+}
+
+.chart-value {
+  margin-bottom: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.chart-track {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.chart-bar {
+  width: 100%;
+  background: var(--primary);
+  transition: height 0.25s ease;
+}
+
+.chart-bar.current {
+  background: #c9331d;
+}
+
+.chart-label {
+  margin-top: 12px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--divider);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.chart-key {
+  width: 10px;
+  height: 10px;
+  background: #c9331d;
+}
+
+.chart-note {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.pay-method {
+  padding: 22px 22px 24px;
+  background: #fff;
+  border: 1px solid #e4e4e6;
+}
+
+.pay-method + .pay-method {
+  margin-top: 18px;
+}
+
+.pay-method h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.pay-method > p {
+  margin: 0 0 20px;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.pay-field {
+  margin-bottom: 18px;
+}
+
+.pay-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.required {
+  color: var(--flag-red);
+}
+
+.pay-field input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 2px solid var(--text-main);
+  border-radius: 0;
+  background: #eeeeee;
+  outline-offset: 2px;
+}
+
+.pay-mono {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+.pay-secondary {
+  border: 1px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.pay-receipt:empty {
+  display: none;
+}
+
+.pay-receipt {
+  margin: 18px 0 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+@media (max-width: 1080px) {
+  .kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+  /* Same side margin as the shared.css containers. This rule lives here
+     because the base .dash-tabs rule does too: a stylesheet loaded later
+     would override the media query, since specificity is equal. */
+  .dash-tabs {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+  .kpi-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+  .dash-tabs {
+      gap: 20px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+    }
+
+  .dash-tab {
+      white-space: nowrap;
+    }
+
+  .chart {
+      gap: 8px;
+    }
+
+  .chart-value {
+      font-size: 0.72rem;
+    }
+}
