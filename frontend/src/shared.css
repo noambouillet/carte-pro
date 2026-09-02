@@ -1,0 +1,334 @@
+/* Classes used by several screens: containers, bands, partner cards,
+   buttons and form fields.
+   Loaded right after App.css, before the component stylesheets. */
+
+/* Shared centred container for every content area: one single definition
+   of the maximum width and the side margins. */
+.home,
+.band-inner,
+.dash-inner,
+.site-footer-inner {
+  width: min(100%, 1320px);
+  margin: 0 auto;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+.action-primary,
+.action-secondary {
+  min-height: 58px;
+  padding: 0 34px;
+  border-radius: 0;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.action-primary {
+  border: 2px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.action-secondary {
+  border: 1px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.action-secondary:hover {
+  background: var(--accent-bg);
+}
+
+.band {
+  background: #fff;
+  border-top: 1px solid var(--divider);
+}
+
+.band-muted {
+  background: #f5f5f5;
+}
+
+.band-inner {
+  padding-top: 54px;
+  padding-bottom: 58px;
+}
+
+.band-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.4vw, 2.05rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.band-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.band-subtitle {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+}
+
+.band-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.step-grid,
+.partner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-card,
+.partner-card {
+  background: #fff;
+  border: 1px solid #e4e4e6;
+  padding: 24px 24px 26px;
+}
+
+.step-card h3,
+.partner-card h2,
+.partner-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.partner-category {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.partner-card p {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--text-muted);
+}
+
+.dash-body,
+.dash-empty {
+  padding-top: 44px;
+  padding-bottom: 64px;
+}
+
+.dash-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 460px;
+  gap: 26px;
+  margin-top: 26px;
+  align-items: start;
+}
+
+.pay-card {
+  padding: 26px 28px 30px;
+  background: var(--accent-bg);
+  border: 1px solid #dededf;
+}
+
+.pay-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.pay-intro {
+  margin: 8px 0 22px;
+  font-size: 0.94rem;
+  color: var(--text-muted);
+}
+
+.pay-primary,
+.pay-secondary {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pay-primary {
+  border: 2px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.pay-note {
+  margin: 14px 0 0;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.dash-subtitle {
+  max-width: 70ch;
+  margin: 14px 0 0;
+  color: var(--text-muted);
+}
+
+.login-card {
+  width: min(100%, 1120px);
+  background: var(--card-bg);
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 20px 50px rgba(31, 31, 36, 0.09);
+  padding: 58px 52px 50px;
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: clamp(2.35rem, 4vw, 3.55rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.intro {
+  max-width: 630px;
+  margin: 18px 0 42px;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+}
+
+.login-form {
+  max-width: 920px;
+}
+
+.field-group {
+  margin-bottom: 28px;
+}
+
+.field-group label {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.field-group input,
+.field-group select {
+  width: 100%;
+  height: 52px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text-main);
+  outline: none;
+  font-size: 1.15rem;
+  height: 60px; 
+}
+
+.field-group input::placeholder {
+  color: #808086;
+}
+
+.field-group select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.field-group input:focus,
+.field-group select:focus {
+  border-color: var(--text-main);
+  box-shadow: inset 0 0 0 1px var(--text-main);
+}
+
+.primary-button,
+.secondary-button {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.primary-button {
+  margin-top: 12px;
+  border: 2px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.nav-button:hover,
+.action-primary:hover,
+.pay-primary:hover,
+.primary-button:hover {
+  background: var(--primary-tint);
+}
+
+.secondary-button {
+  border: 1px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.secondary-button:hover {
+  background: rgba(18, 18, 163, 0.04);
+}
+
+@media (max-width: 1080px) {
+  .dash-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+  .step-grid,
+    .partner-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+  .home,
+    .band-inner,
+    .dash-inner,
+    .site-footer-inner {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+  .step-grid,
+    .partner-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+  .login-card {
+      padding: 36px 24px 32px;
+    }
+
+  .intro {
+      margin-bottom: 30px;
+    }
+}
