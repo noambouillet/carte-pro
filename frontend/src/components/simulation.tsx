@@ -26,6 +26,3 @@ export function Amount({
     </>
   )
 }
-
-export const SIMULATION_CSV =
-  'SIMULATION - aucune valeur monetaire reelle. Montants fictifs, aucun paiement execute.'

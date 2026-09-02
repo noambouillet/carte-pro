@@ -1,9 +1,6 @@
-export type Partner = {
-  category: string
-  name: string
-  city: string
-  since: string
-}
+// To delete when connecting db
+
+import type { Partner } from '../types/partner'
 
 export const partners: Partner[] = [
   {

@@ -1,6 +1,5 @@
-import { partners } from './partners.tsx'
-import './Home.css'
-
+import './LandingPage.css'
+import { partners } from './partners'
 
 type HomeProps = {
   onLogin: () => void

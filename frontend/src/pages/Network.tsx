@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { partners } from './partners.tsx'
 import './Network.css'
+import { partners } from './partners'
 
 type NetworkProps = {
   establishment: string

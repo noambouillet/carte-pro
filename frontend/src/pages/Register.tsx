@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { cleanSiren, formatSiren, validateSiren } from './siren.tsx'
-import './Create.css'
+import { cleanSiren, formatSiren, validateSiren } from '../components/siren'
+import './Register.css'
 
 type CreateAccountProps = {
   onBackToLogin: () => void
