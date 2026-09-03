@@ -41,6 +41,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
         onSubmit={(event) => {
           event.preventDefault()
           setSubmitted(true)
+          window.location.href = '/'
         }}
       >
         <div className="field-group">

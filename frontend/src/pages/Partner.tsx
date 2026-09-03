@@ -242,7 +242,7 @@ function Partner() {
                   className="pay-primary"
                   type="button"
                   onClick={() =>
-                    setReceipt('Scanner indisponible en démonstration.')
+                    setReceipt('Scanner indisponible.')
                   }
                 >
                   Ouvrir le scanner
@@ -254,7 +254,7 @@ function Partner() {
                 onSubmit={(event) => {
                   event.preventDefault()
                   setReceipt(
-                    'Encaissement simulé : aucun montant réel n’a été débité.',
+                    'Saisie manuelle indisponible.',
                   )
                 }}
               >
