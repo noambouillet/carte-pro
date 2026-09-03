@@ -75,7 +75,7 @@ function Employee() {
              31/08/2026 à 09:12
           </p>
 
-          
+
         </section>
 
         <aside className="pay-card" aria-labelledby="pay-title">
@@ -100,7 +100,7 @@ function Employee() {
           <h2 className="band-title" id="history-title">
             Historique des transactions
           </h2>
-          
+
         </div>
 
         <p className="history-intro">
@@ -143,7 +143,7 @@ function Employee() {
             {visible.length} transactions sur {transactions.length}
             {showAll ? null : (
               <>
-                {' — '}
+                {' - '}
                 <button
                   className="band-link"
                   type="button"
