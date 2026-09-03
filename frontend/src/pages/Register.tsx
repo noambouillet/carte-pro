@@ -41,7 +41,6 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
         onSubmit={(event) => {
           event.preventDefault()
           setSubmitted(true)
-          window.location.href = '/'
         }}
       >
         <div className="field-group">
@@ -143,9 +142,37 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
                 </p>
               ) : (
                 <p className="field-hint" id="purpose-hint">
-                  Activité principale déclarée lors de l&apos;immatriculation.
+                  Activité principale déclarée lors de l'immatriculation.
                 </p>
               )}
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="name">Nom de l'établissement</label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Exemple : Boulangerie Dupont"
+              />
+
+            </div>
+            
+            <div className="field-group">
+              <label htmlFor="address">Adresse de l'établissement</label>
+              <input
+                id="address"
+                type="text"
+                placeholder="Exemple : 12 rue de la République, 75001 Paris"
+              />
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="phone">Numéro de téléphone (public)</label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="Exemple : 01 23 45 67 89"
+              />
             </div>
           </>
         )}
