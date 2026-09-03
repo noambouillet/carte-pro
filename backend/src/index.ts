@@ -9,6 +9,17 @@ import { adminRoutes } from "./routes/admin.routes";
 import { employeeRoutes } from "./routes/employee.routes";
 import { partnersRoutes } from "./routes/partners.routes";
 
+const packageJson = await Bun.file("package.json").json();
+
+async function checkDatabaseConnection(): Promise<boolean> {
+  try {
+    await database.execute(sql`select 1`);
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function initializeDatabase() {
   await database.execute(sql`select 1`);
   console.log("Database connection established successfully");
@@ -39,14 +50,24 @@ async function start() {
           },
         })
       )
-      .get("/health", () => ({ status: "ok" as const }))
+      .get('/health', async ({ set }) => {
+        const isDbHealthy = await checkDatabaseConnection()
+
+        if (!isDbHealthy) {
+          set.status = 503
+          return {
+            version: packageJson.version, services: { database: 'unhealthy' }
+            }
+        }
+        return { version: packageJson.version, services: { database: 'healthy' } }
+      })
       .get("/", () => "Hello Ticket Tout")
       .use(adminRoutes)
       .use(partnersRoutes)
       .use(employeeRoutes)
       .listen(PORT);
 
-    console.log(`Elysia is running on port ${app.server?.port}`);
+    console.log(`Ticket Tout is running on port http://${app.server?.hostname}:${app.server?.port}`);
   } catch (error) {
     console.error("Failed to start application:", error);
     process.exit(1);
