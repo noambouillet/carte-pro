@@ -13,7 +13,7 @@ function Header({
   onHome,
   onEmployee,
   onPartner,
-  onAdmin,
+  // onAdmin,
   onBecomePartner,
   onLogin,
 }: HeaderProps) {
@@ -61,9 +61,9 @@ function Header({
           >
             Partenaire
           </button>
-          <button className="nav-role-button" type="button" onClick={onAdmin}>
+          {/* <button className="nav-role-button" type="button" onClick={onAdmin}>
             Admin
-          </button>
+          </button> */}
         </nav>
 
         <nav className="site-nav site-nav-actions" aria-label="Navigation principale">
