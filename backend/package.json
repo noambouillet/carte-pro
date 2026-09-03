@@ -2,14 +2,18 @@
   "name": "backend",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "seed": "bun run scripts/seed.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@elysia/cors": "^1.4.2",
+    "@elysia/jwt": "^1.4.2",
     "@elysia/openapi": "^1.4.16",
+    "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
-    "elysia": "latest"
+    "elysia": "latest",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "bun-types": "latest"

@@ -45,7 +45,7 @@ async function start() {
           documentation: {
             info: {
               title: "API Ticket Tout",
-              version: "1.0.0",
+              version: packageJson.version,
             },
           },
         })
