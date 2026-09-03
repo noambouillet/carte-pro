@@ -1,20 +1,20 @@
-import { Sequelize } from "sequelize";
-import { requiredEnv } from './env'
+import { SQL } from "bun";
+import { drizzle } from "drizzle-orm/bun-sql";
+import { DB_PORT, DB_USER, DB_HOST, DB_PASSWORD, DB_NAME } from "./env";
 
-const sequelize = new Sequelize({
-  dialect: "postgres",
-  host: requiredEnv("DB_HOST"),
-  port: Number(process.env.DB_PORT || 5432),
-  database: requiredEnv("DB_NAME"),
-  username: requiredEnv("DB_USER"),
-  password: requiredEnv("DB_PASSWORD"),
-  logging: false,
-  pool: {
-    max: 10,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
+const databaseConnection = new SQL({
+  hostname: DB_HOST,
+  port: DB_PORT,
+  username: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
 });
 
-export { sequelize };
+const database = drizzle({
+  client: databaseConnection,
+});
+
+export {
+  database,
+  databaseConnection,
+};
