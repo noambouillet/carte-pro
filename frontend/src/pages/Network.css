@@ -1,0 +1,60 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.filter-field {
+  flex: 1 1 320px;
+}
+
+.filter-field-narrow {
+  flex: 0 1 300px;
+}
+
+.filter-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.filter-field input,
+.filter-field select {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: #fff;
+  outline: none;
+}
+
+.filter-field select {
+  cursor: pointer;
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+  border-color: var(--text-main);
+  box-shadow: inset 0 0 0 1px var(--text-main);
+}
+
+.filter-count {
+  margin: 26px 0 0;
+  font-weight: 700;
+}
+
+.filter-empty {
+  margin: 26px 0 0;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e4e4e6;
+  color: var(--text-muted);
+}
+
+.partner-card .partner-since {
+  margin-top: 10px;
+  font-size: 0.88rem;
+}

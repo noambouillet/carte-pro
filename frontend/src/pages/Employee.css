@@ -1,0 +1,128 @@
+/* Styles for Employee.tsx */
+
+.balance-card {
+  padding: 34px 36px 36px;
+  background: var(--primary);
+  color: #fff;
+}
+
+.balance-label {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.balance-value {
+  margin: 18px 0 0;
+  font-size: clamp(3rem, 6vw, 4.4rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.balance-meta {
+  margin: 18px 0 0;
+  font-size: 0.98rem;
+}
+
+.history {
+  margin-top: 54px;
+}
+
+.history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.history-intro {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+}
+
+.history-card {
+  margin-top: 24px;
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e4e4e6;
+}
+
+.history-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 18px 24px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.history-table thead th {
+  background: #f5f5f5;
+  border-bottom: 1px solid #e4e4e6;
+  font-weight: 700;
+}
+
+.history-table tbody tr + tr td {
+  border-top: 1px solid #ededee;
+}
+
+.cell-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.history-partner {
+  display: block;
+  font-weight: 700;
+}
+
+.history-city {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  background: var(--valid-bg);
+  color: var(--valid-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.history-footer {
+  margin: 0;
+  padding: 18px 24px;
+  border-top: 1px solid #e4e4e6;
+  color: var(--text-muted);
+}
+
+.qr-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 32px;
+  padding: 32px 36px 28px;
+  background: #fff;
+  border: 1px solid #e4e4e6;
+}
+
+.qr-value {
+  margin: 24px 0 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}

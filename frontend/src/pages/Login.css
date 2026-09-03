@@ -1,0 +1,46 @@
+.label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.label-row a {
+  font-size: 0.95rem;
+}
+
+.divider {
+  margin: 24px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divider);
+}
+
+.divider span {
+  font-size: 0.96rem;
+}
+
+.legal {
+  max-width: 850px;
+  margin: 38px 0 0;
+  font-size: 0.96rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .label-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+}
