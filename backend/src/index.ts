@@ -1,10 +1,11 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { openapi } from "@elysia/openapi";
 import { cors } from "@elysia/cors";
 import { sql } from "drizzle-orm";
 
 import { database } from "./config/database";
 import { PORT, FRONTEND_URL } from "./config/env";
+import { authRoutes } from "./routes/auth.route"
 import { adminRoutes } from "./routes/admin.routes";
 import { employeeRoutes } from "./routes/employee.routes";
 import { partnersRoutes } from "./routes/partners.routes";
@@ -57,11 +58,27 @@ async function start() {
           set.status = 503
           return {
             version: packageJson.version, services: { database: 'unhealthy' }
-            }
+          }
         }
-        return { version: packageJson.version, services: { database: 'healthy' } }
+        return { version: packageJson.version, services: { database: 'healthy' } };
+      }, {
+        response: {
+          200: t.Object({
+            version: t.String(),
+            services: t.Object({
+              database: t.Literal("healthy"),
+            }),
+          }),
+          503: t.Object({
+            version: t.String(),
+            services: t.Object({
+              database: t.Literal("unhealthy"),
+            }),
+          }),
+        },
       })
       .get("/", () => "Hello Ticket Tout")
+      .use(authRoutes)
       .use(adminRoutes)
       .use(partnersRoutes)
       .use(employeeRoutes)
