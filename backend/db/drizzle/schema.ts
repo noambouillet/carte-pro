@@ -19,7 +19,7 @@ export const transactionAttemptStatus = pgEnum("transaction_attempt_status", ['r
 export const transactionEventsIdSeq = pgSequence("transaction_events_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "9223372036854775807", cache: "1", cycle: false })
 
 export const partners = pgTable("partners", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	name: text().notNull(),
 	siren: char({ length: 9 }).notNull(),
 	objetSocial: text("objet_social").notNull(),
@@ -36,7 +36,7 @@ export const partners = pgTable("partners", {
 ]);
 
 export const partnerValidationDecisions = pgTable("partner_validation_decisions", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	partnerId: bigint("partner_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -59,7 +59,7 @@ export const partnerValidationDecisions = pgTable("partner_validation_decisions"
 ]);
 
 export const adminAgents = pgTable("admin_agents", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	firstName: text("first_name").notNull(),
 	lastName: text("last_name").notNull(),
 	// TODO: failed to parse database type 'citext'
@@ -71,7 +71,7 @@ export const adminAgents = pgTable("admin_agents", {
 ]);
 
 export const qrCodes = pgTable("qr_codes", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	employeeId: bigint("employee_id", { mode: "number" }).notNull(),
 	token: text().notNull(),
@@ -90,7 +90,7 @@ export const qrCodes = pgTable("qr_codes", {
 ]);
 
 export const employees = pgTable("employees", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	firstName: text("first_name").notNull(),
 	lastName: text("last_name").notNull(),
 	// TODO: failed to parse database type 'citext'
@@ -103,7 +103,7 @@ export const employees = pgTable("employees", {
 ]);
 
 export const creditGrants = pgTable("credit_grants", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	employeeId: bigint("employee_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -192,7 +192,7 @@ export const transactionAttempts = pgTable("transaction_attempts", {
 ]);
 
 export const transactionReversals = pgTable("transaction_reversals", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
+	id: bigserial({ mode: "number" }).primaryKey().notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	transactionId: bigint("transaction_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
