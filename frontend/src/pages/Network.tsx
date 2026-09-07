@@ -41,7 +41,7 @@ function Network({ establishment }: NetworkProps) {
       <h1 className="dash-title">Réseau des partenaires</h1>
       <p className="dash-subtitle">
         Consultez les établissements référencés. Les
-        commerçants du réseau acceptent tous le paiement Ticket Tout.
+        commerçants du réseau acceptent tous le paiement Carte Pro.
       </p>
 
       <div className="filters">

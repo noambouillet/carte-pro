@@ -1,6 +1,6 @@
-# Ticket Tout
+# Carte Pro
 
-Ticket Tout is a digital employee benefit platform that lets employees use employer-provided credits across a network of approved partners.
+Carte Pro is a digital employee benefit platform that lets employees use employer-provided credits across a network of approved partners.
 Employees can discover partners, track their balance and transactions, and pay using a QR code.
 Partners manage payments and their financial activity, while the Ministry administers partners, credits, and featured recommendations.
 

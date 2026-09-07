@@ -32,13 +32,13 @@ function Header({
           className="brand"
           type="button"
           onClick={onHome}
-          aria-label="Ticket Tout, retour à l'accueil"
+          aria-label="Carte Pro, retour à l'accueil"
         >
 
           <span className="brand-separator" aria-hidden="true" />
 
           <span className="brand-product">
-            <span className="brand-name">Ticket Tout</span>
+            <span className="brand-name">Carte Pro</span>
             <span className="brand-tagline">
               Avantages salariés dématérialisés
             </span>

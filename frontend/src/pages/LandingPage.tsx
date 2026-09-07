@@ -14,7 +14,7 @@ type HomeProps = {
 const steps = [
   {
     title: "L'employeur crédite le compte",
-    text: "L'abondement mensuel est versé sur le compte Ticket Tout de chaque salarié, à date fixe.",
+    text: "L'abondement mensuel est versé sur le compte Carte Pro de chaque salarié, à date fixe.",
   },
   {
     title: 'Le salarié paie par QR code',
@@ -65,7 +65,7 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
           </h1>
 
           <p className="home-lead">
-            Ticket Tout remplace les titres papier : votre employeur crédite votre
+            Carte Pro remplace les titres papier : votre employeur crédite votre
             compte, vous payez par QR code chez un partenaire référencé, le partenaire est réglé sous 48 heures.
           </p>
 
@@ -102,7 +102,7 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
 
         <aside className="home-aside" aria-labelledby="audience-title">
           <h2 className="aside-title" id="audience-title">
-            À qui s&apos;adresse Ticket Tout
+            À qui s&apos;adresse Carte Pro
           </h2>
 
           <div className="aside-block">

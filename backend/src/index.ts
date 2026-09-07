@@ -45,7 +45,7 @@ async function start() {
           openapiVersion: "3.0.3",
           documentation: {
             info: {
-              title: "API Ticket Tout",
+              title: "API Carte Pro",
               version: packageJson.version,
             },
           },
@@ -77,14 +77,14 @@ async function start() {
           }),
         },
       })
-      .get("/", () => "Hello Ticket Tout")
+      .get("/", () => "Hello Carte Pro")
       .use(authRoutes)
       .use(adminRoutes)
       .use(partnersRoutes)
       .use(employeeRoutes)
       .listen(PORT);
 
-    console.log(`Ticket Tout is running on port http://${app.server?.hostname}:${app.server?.port}`);
+    console.log(`Carte Pro is running on port http://${app.server?.hostname}:${app.server?.port}`);
   } catch (error) {
     console.error("Failed to start application:", error);
     process.exit(1);
