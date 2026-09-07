@@ -1,6 +1,6 @@
 import './Login.css'
 import { useState } from 'react'
-import { login } from '../api/Login'
+import { login } from '../api/Auth'
 
 type LoginProps = {
   onCreateAccount: () => void
@@ -13,13 +13,14 @@ function Login({ onCreateAccount }: LoginProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     try {
-      const response = await login(email, password)
+      const loginPayload = { email, password }
+      const response = await login(loginPayload)
       console.log('Login successful:', response)
     } catch (error) {
       console.error('Login failed:', error)
     }
   }
-    
+
   return (
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>
@@ -28,7 +29,7 @@ function Login({ onCreateAccount }: LoginProps) {
         et gérez vos projets.
       </p>
 
-      <form 
+      <form
         className="login-form"
         noValidate
         onSubmit={handleSubmit}
