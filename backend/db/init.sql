@@ -65,7 +65,10 @@ CREATE TABLE qr_codes (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at  TIMESTAMPTZ NOT NULL,
     used_at     TIMESTAMPTZ,
-    CHECK (expires_at <= created_at + INTERVAL '5 minutes')
+    CHECK (
+        expires_at > created_at
+        AND expires_at <= created_at + INTERVAL '5 minutes'
+    )
 );
 
 CREATE INDEX idx_qr_codes_employee_id ON qr_codes (employee_id);
@@ -102,14 +105,6 @@ CREATE INDEX idx_transaction_attempts_employee_id ON transaction_attempts (emplo
 CREATE INDEX idx_transaction_attempts_attempted_at ON transaction_attempts (attempted_at);
 CREATE UNIQUE INDEX idx_transaction_attempts_partner_idempotency ON transaction_attempts (partner_id, idempotency_key);
 
-CREATE TABLE transaction_reversals (
-    id              BIGSERIAL PRIMARY KEY,
-    transaction_id  BIGINT NOT NULL UNIQUE REFERENCES transactions (id),
-    agent_id        BIGINT NOT NULL REFERENCES admin_agents (id),
-    reason          TEXT NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 CREATE VIEW employee_balances AS
 SELECT
     e.id AS employee_id,
@@ -125,40 +120,47 @@ LEFT JOIN (
 ) g ON g.employee_id = e.id
 LEFT JOIN (
     SELECT
-        tr.employee_id,
-        SUM(tr.amount_cents) AS total_debited_cents
-    FROM transactions tr
-    LEFT JOIN transaction_reversals rv
-        ON rv.transaction_id = tr.id
-    WHERE rv.id IS NULL
-    GROUP BY tr.employee_id
+        employee_id,
+        SUM(amount_cents) AS total_debited_cents
+    FROM transactions
+    GROUP BY employee_id
 ) t ON t.employee_id = e.id;
 
-CREATE VIEW transaction_history AS
+CREATE OR REPLACE VIEW transaction_history AS
+SELECT
+    g.id,
+    g.granted_at AS occurred_at,
+    g.employee_id,
+    NULL::BIGINT AS partner_id,
+    NULL::BIGINT AS qr_code_id,
+    g.amount_cents,
+    'credit_granted'::TEXT AS status
+FROM credit_grants g
+UNION ALL
 SELECT
     t.id,
     t.created_at AS occurred_at,
     t.employee_id,
     t.partner_id,
-    t.amount_cents,
+    t.qr_code_id,
+    -t.amount_cents AS amount_cents,
     'approved'::TEXT AS status
 FROM transactions t
-
 UNION ALL
-
 SELECT
     a.id,
     a.attempted_at AS occurred_at,
     a.employee_id,
     a.partner_id,
-    a.amount_cents,
+    a.qr_code_id,
+    -a.amount_cents AS amount_cents,
     a.status::TEXT AS status
 FROM transaction_attempts a;
 
 CREATE OR REPLACE FUNCTION forbid_transaction_mutation()
 RETURNS TRIGGER AS $$
 BEGIN
-    RAISE EXCEPTION 'transactions are immutable: insert a transaction_reversals row instead';
+    RAISE EXCEPTION 'transactions are immutable';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -188,6 +190,12 @@ DECLARE
     v_transaction_id BIGINT;
     v_attempt_status transaction_attempt_status;
 BEGIN
+    IF p_amount_cents <= 0 THEN
+        RAISE EXCEPTION 'payment amount must be greater than zero';
+    END IF;
+
+    PERFORM pg_advisory_xact_lock(p_employee_id);
+
     SELECT id INTO v_transaction_id
     FROM transactions
     WHERE partner_id = p_partner_id AND idempotency_key = p_idempotency_key;
@@ -206,7 +214,7 @@ BEGIN
         RETURN;
     END IF;
 
-    PERFORM 1 FROM employees WHERE id = p_employee_id AND status = 'active' FOR UPDATE;
+    PERFORM 1 FROM employees WHERE id = p_employee_id AND status = 'active';
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'employee does not exist or is inactive';
@@ -216,11 +224,8 @@ BEGIN
         RAISE EXCEPTION 'partner is not validated';
     END IF;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM qr_codes
-        WHERE id = p_qr_code_id AND employee_id = p_employee_id
-          AND used_at IS NULL AND now() < expires_at
-    ) THEN
+    PERFORM 1 FROM qr_codes WHERE id = p_qr_code_id AND employee_id = p_employee_id AND used_at IS NULL AND now() < expires_at FOR UPDATE;
+    IF NOT FOUND THEN
         RAISE EXCEPTION 'invalid or expired QR code';
     END IF;
 
@@ -243,7 +248,7 @@ BEGIN
     VALUES (p_employee_id, p_partner_id, p_qr_code_id, p_amount_cents, p_idempotency_key)
     RETURNING id INTO v_transaction_id;
 
-    UPDATE qr_codes SET used_at = now() WHERE id = p_qr_code_id AND used_at IS NULL;
+    UPDATE qr_codes SET used_at = now() WHERE id = p_qr_code_id;
 
     RETURN QUERY SELECT v_transaction_id, 'approved'::TEXT;
 END;
@@ -257,11 +262,27 @@ BEGIN
     PERFORM pg_advisory_xact_lock(NEW.employee_id);
 
     SELECT balance_cents INTO current_balance FROM employee_balances WHERE employee_id = NEW.employee_id;
+    current_balance := COALESCE(current_balance, 0);
 
-    IF current_balance IS NULL OR current_balance < NEW.amount_cents THEN
-        RAISE EXCEPTION
-            'insufficient_balance: employee % has % cents available, transaction requests % cents',
-            NEW.employee_id, COALESCE(current_balance, 0), NEW.amount_cents;
+    IF current_balance < NEW.amount_cents THEN
+        INSERT INTO transaction_attempts (
+            employee_id,
+            partner_id,
+            qr_code_id,
+            amount_cents,
+            status,
+            idempotency_key
+        )
+        VALUES (
+            NEW.employee_id,
+            NEW.partner_id,
+            NEW.qr_code_id,
+            NEW.amount_cents,
+            'refused_insufficient_balance',
+            NEW.idempotency_key
+        )
+        ON CONFLICT (partner_id, idempotency_key) DO NOTHING;
+        RETURN NULL;
     END IF;
 
     RETURN NEW;
