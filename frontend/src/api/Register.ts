@@ -1,4 +1,4 @@
-import api from './Axios'
+import api from './AxiosConfig'
 
 export const registerEmployee = async (firstName: string, lastName: string, email: string, password: string) => {
   try {

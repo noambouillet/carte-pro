@@ -2,9 +2,45 @@ import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
 import { database } from "../config/database";
 import { employees, partners, adminAgents } from "../../db/drizzle/schema";
-import { authPlugin, AUTH_COOKIE, issueSession, clearSession, verifyPassword } from "../middleware/auth";
+import { authPlugin, AUTH_COOKIE, issueSession, clearSession, verifyPassword, requireRole } from "../middleware/auth";
 
 const roleEnum = t.Union([t.Literal("employee"), t.Literal("partner"), t.Literal("admin")]);
+const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
+const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected")]);
+
+const errorSchema = t.Object({ error: t.String() });
+
+const meResponseSchema = t.Union([
+  t.Object({
+    role: t.Literal("employee"),
+    employee: t.Object({
+      id: t.String(),
+      firstName: t.String(),
+      lastName: t.String(),
+      email: t.String(),
+      status: employeeStatusEnum,
+    }),
+  }),
+  t.Object({
+    role: t.Literal("partner"),
+    partner: t.Object({
+      id: t.String(),
+      name: t.String(),
+      siren: t.String(),
+      objetSocial: t.String(),
+      address: t.String(),
+      email: t.String(),
+      status: partnerStatusEnum,
+    }),
+  }),
+  t.Object({
+    role: t.Literal("admin"),
+    admin: t.Object({
+      id: t.String(),
+      email: t.String(),
+    }),
+  }),
+]);
 
 const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
   .use(authPlugin)
@@ -59,7 +95,7 @@ const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       }),
       response: {
         200: t.Object({ role: roleEnum }),
-        401: t.Object({ error: t.String() }),
+        401: errorSchema,
         403: t.Object({ error: t.String(), status: t.Optional(t.String()) }),
       },
       detail: {
@@ -76,6 +112,78 @@ const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     {
       response: { 200: t.Object({ success: t.Literal(true) }) },
       detail: { summary: "Clear the session cookie", tags: ["auth"] },
+    }
+  )
+  .get("/me", async ({ authUser, set }) => {
+      const user = authUser!;
+
+      if (user.role === "employee") {
+        const [row] = await database
+          .select({
+            id: employees.id,
+            firstName: employees.firstName,
+            lastName: employees.lastName,
+            email: employees.email,
+            status: employees.status,
+          })
+          .from(employees)
+          .where(eq(employees.id, user.id))
+          .limit(1);
+
+        if (!row) {
+          set.status = 404;
+          return { error: "not_found" };
+        }
+        return { role: "employee" as const, employee: { ...row, id: String(row.id) } };
+      }
+
+      if (user.role === "partner") {
+        const [row] = await database
+          .select({
+            id: partners.id,
+            name: partners.name,
+            siren: partners.siren,
+            objetSocial: partners.objetSocial,
+            address: partners.address,
+            email: partners.email,
+            status: partners.status,
+          })
+          .from(partners)
+          .where(eq(partners.id, user.id))
+          .limit(1);
+
+        if (!row) {
+          set.status = 404;
+          return { error: "not_found" };
+        }
+        return { role: "partner" as const, partner: { ...row, id: String(row.id) } };
+      }
+
+      const [row] = await database
+        .select({ id: adminAgents.id, email: adminAgents.email })
+        .from(adminAgents)
+        .where(eq(adminAgents.id, user.id))
+        .limit(1);
+
+      if (!row) {
+        set.status = 404;
+        return { error: "not_found" };
+      }
+      return { role: "admin" as const, admin: { id: String(row.id), email: row.email } };
+    },
+    {
+      beforeHandle: requireRole("employee", "partner", "admin"),
+      response: {
+        200: meResponseSchema,
+        401: errorSchema,
+        403: errorSchema,
+        404: errorSchema,
+      },
+      detail: {
+        summary: "Get the currently authenticated user",
+        description: "Reads the session cookie and returns the logged-in employee/partner/admin.",
+        tags: ["auth"],
+      },
     }
   );
 
