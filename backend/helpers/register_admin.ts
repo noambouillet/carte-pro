@@ -1,7 +1,7 @@
 import { database } from "../src/config/database";
 import { adminAgents } from "../db/drizzle/schema";
 
-const username = `admin_${crypto.randomUUID().slice(0, 8)}@ministere.test`;
+const username = `admin_${crypto.randomUUID().slice(0, 8)}@cartepro.test`;
 const password = crypto.randomUUID();
 
 const passwordHash = await Bun.password.hash(password, {

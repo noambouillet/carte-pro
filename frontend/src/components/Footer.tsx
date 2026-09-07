@@ -10,7 +10,7 @@ function Footer() {
       <div className="site-footer-inner">
         <div className="footer-brand">
           <p className="footer-note">
-            Ticket Tout est un dispositif d&apos;avantages salariés dématérialisés fictif.
+            CartePro est un dispositif d&apos;avantages salariés dématérialisés fictif.
           </p>
         </div>
 

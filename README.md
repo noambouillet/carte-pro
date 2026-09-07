@@ -1,8 +1,8 @@
-# Ticket Tout
+# CartePro
 
-Ticket Tout is a digital employee benefit platform that lets employees use employer-provided credits across a network of approved partners.
+CartePro is a digital employee benefit platform that lets employees use employer-provided credits across a network of approved partners.
 Employees can discover partners, track their balance and transactions, and pay using a QR code.
-Partners manage payments and their financial activity, while the Ministry administers partners, credits, and featured recommendations.
+Partners manage payments and their financial activity, while the  administers, credits, and featured recommendations.
 
 ## Build
 
@@ -32,9 +32,9 @@ Change the password in `.env`:
 ```
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=tickettout_user
+DB_USER=cartePro_user
 DB_PASSWORD=change_this_password
-DB_NAME=tickettout
+DB_NAME=cartePro
 ```
 
 Start PostgreSQL:

@@ -34,7 +34,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>
       <p className="intro">
-        Accédez à votre espace d&apos;administration de la transition numérique
+        Accédez à votre espace d'administration de la transition numérique
         et gérez vos projets.
       </p>
 
@@ -86,9 +86,9 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
       </form>
 
       <p className="legal">
-        En continuant, vous acceptez les conditions générales d&apos;utilisation
-        du portail ministériel. Ce site est protégé par les systèmes de
-        sécurité de l&apos;État.
+        En continuant, vous acceptez les conditions générales d'utilisation.
+        Ce site est protégé par les systèmes de
+        sécurité de l'État.
       </p>
     </section>
   )
