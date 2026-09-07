@@ -1,10 +1,25 @@
 import './Login.css'
+import { useState } from 'react'
+import { login } from '../api/Login'
 
-type LoginViewProps = {
+type LoginProps = {
   onCreateAccount: () => void
 }
 
-function LoginView({ onCreateAccount }: LoginViewProps) {
+function Login({ onCreateAccount }: LoginProps) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    try {
+      const response = await login(email, password)
+      console.log('Login successful:', response)
+    } catch (error) {
+      console.error('Login failed:', error)
+    }
+  }
+    
   return (
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>
@@ -13,13 +28,19 @@ function LoginView({ onCreateAccount }: LoginViewProps) {
         et gérez vos projets.
       </p>
 
-      <form className="login-form">
+      <form 
+        className="login-form"
+        noValidate
+        onSubmit={handleSubmit}
+        >
         <div className="field-group">
           <label htmlFor="email">Adresse e-mail</label>
           <input
             id="email"
             type="email"
             placeholder="Exemple : nom@domaine.gouv.fr"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
           />
         </div>
 
@@ -32,6 +53,8 @@ function LoginView({ onCreateAccount }: LoginViewProps) {
             id="password"
             type="password"
             placeholder="Saisissez votre mot de passe"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
           />
         </div>
 
@@ -61,4 +84,4 @@ function LoginView({ onCreateAccount }: LoginViewProps) {
   )
 }
 
-export default LoginView
+export default Login

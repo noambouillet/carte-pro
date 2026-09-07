@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Qr from '../components/Qr'
-import { Amount, SimulationNotice } from '../components/simulation'
+import { Amount, SimulationNotice } from '../components/Simulation'
 import './Employee.css'
 import './Partner.css'
 import Network from './Network'
