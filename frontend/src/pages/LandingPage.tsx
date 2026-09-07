@@ -66,8 +66,7 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
 
           <p className="home-lead">
             Ticket Tout remplace les titres papier : votre employeur crédite votre
-            compte, vous payez par QR code chez un partenaire référencé par le
-            ministère, le partenaire est réglé sous 48 heures.
+            compte, vous payez par QR code chez un partenaire référencé, le partenaire est réglé sous 48 heures.
           </p>
 
           {!isLoggedIn && (

@@ -40,7 +40,7 @@ function Network({ establishment }: NetworkProps) {
     <div className="dash-inner dash-body">
       <h1 className="dash-title">Réseau des partenaires</h1>
       <p className="dash-subtitle">
-        Consultez les établissements référencés par le ministère. Les
+        Consultez les établissements référencés. Les
         commerçants du réseau acceptent tous le paiement Ticket Tout.
       </p>
 

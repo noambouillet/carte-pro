@@ -36,6 +36,12 @@
   font-size: 0.82rem;
 }
 
+.footer-disclaimer {
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
 .footer-note {
   margin: 20px 0 0;
   font-size: 0.95rem;
