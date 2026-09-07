@@ -1,49 +1,16 @@
 import { Elysia, t } from "elysia";
 import { desc, eq } from "drizzle-orm";
-import { openapi } from "@elysia/openapi";
 import { database } from "../config/database";
-import { authPlugin, requireEmployee, verifyPassword, hashPassword, } from "../middleware/auth";
-import { employees, employeeBalances, transactions, } from "../../db/drizzle/schema";
+import { authPlugin, requireEmployee, requireActiveEmployee, hashPassword } from "../middleware/auth";
+import { qrJwtPlugin } from "../middleware/qr";
+import { employees, employeeBalances, transactions, qrCodes } from "../../db/drizzle/schema";
 
-export const employeeRoutes = new Elysia({ prefix: "/api/employee" })
+const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
+const errorSchema = t.Object({ error: t.String() });
+
+export const employeeRoutes = new Elysia({ prefix: "/api/v1/employee" })
   .use(authPlugin)
-  .use(openapi())
-  .get('/qrcode', 'QR Code generation, in progress')
-  .post("/login", async ({ body, jwt, set }) => {
-    const [employee] = await database
-      .select({
-        id: employees.id,
-        passwordHash: employees.passwordHash,
-        status: employees.status,
-      })
-      .from(employees)
-      .where(eq(employees.email, body.email))
-      .limit(1);
-
-    if (!employee || !(await verifyPassword(body.password, employee.passwordHash))) {
-      set.status = 401;
-      return { error: "invalid_credentials" };
-    }
-    if (employee.status !== "active") {
-      set.status = 403;
-      return { error: "account_inactive" };
-    }
-
-    const token = await jwt.sign({
-      sub: String(employee.id),
-      role: "employee",
-    });
-
-      return { token };
-    },
-    {
-      body: t.Object({
-        email: t.String(),
-        password: t.String(),
-      }),
-    }
-  )
-
+  .use(qrJwtPlugin)
   .post("/register", async ({ body, set }) => {
       const passwordHash = await hashPassword(body.password);
 
@@ -57,24 +24,19 @@ export const employeeRoutes = new Elysia({ prefix: "/api/employee" })
             passwordHash,
           })
           .returning({
-            id: employees.id  ,
+            id: employees.id,
             firstName: employees.firstName,
             lastName: employees.lastName,
             email: employees.email,
             status: employees.status,
             createdAt: employees.createdAt,
           });
+
         set.status = 201;
-
-        return {
-          employee: {
-            ...employee,
-            id: String(employee.id),
-          },
-        };
+        return { employee: { ...employee, id: String(employee.id) } };
       } catch (error: any) {
-        const code = error?.cause?.errno;
 
+        const code = error?.code ?? error?.cause?.errno;
         if (code === "23505") {
           set.status = 409;
           return {
@@ -92,52 +54,119 @@ export const employeeRoutes = new Elysia({ prefix: "/api/employee" })
         email: t.String({ minLength: 1 }),
         password: t.String({ minLength: 8 }),
       }),
+      response: {
+        201: t.Object({
+          employee: t.Object({
+            id: t.String(),
+            firstName: t.String(),
+            lastName: t.String(),
+            email: t.String(),
+            status: employeeStatusEnum,
+            createdAt: t.String(),
+          }),
+        }),
+        409: t.Object({ error: t.String(), message: t.String() }),
+      },
+      detail: { summary: "Register a new employee", tags: ["employee"] },
     }
   )
+  .get("/balance", async ({ authUser, set }) => {
+      const [row] = await database
+        .select({ balance: employeeBalances.balanceCents })
+        .from(employeeBalances)
+        .where(eq(employeeBalances.employeeId, authUser!.id))
+        .limit(1);
 
-  .get("/balance", async ({ user, set }) => {
-    const [row] = await database
-      .select({
-        employeeId: employeeBalances.employeeId,
-        balance: employeeBalances.balance,
-      })
-      .from(employeeBalances)
-      .where(eq(employeeBalances.employeeId, user.id))
-      .limit(1);
+      if (!row) {
+        set.status = 404;
+        return { error: "employee_not_found" };
+      }
 
-    if (!row) {
-      set.status = 404;
-      return { error: "employee_not_found" };
+      return { balanceCents: Number(row.balance) };
+    },
+    {
+      beforeHandle: requireEmployee,
+      response: {
+        200: t.Object({ balanceCents: t.Integer() }),
+        401: errorSchema,
+        403: errorSchema,
+        404: errorSchema,
+      },
+      detail: {
+        summary: "Real-time balance",
+        tags: ["employee"],
+      },
     }
+  )
+  .get("/transactions", async ({ authUser }) => {
+      const result = await database
+        .select({
+          id: transactions.id,
+          partnerId: transactions.partnerId,
+          qrCodeId: transactions.qrCodeId,
+          amountCents: transactions.amountCents,
+          idempotencyKey: transactions.idempotencyKey,
+          createdAt: transactions.createdAt,
+        })
+        .from(transactions)
+        .where(eq(transactions.employeeId, authUser!.id))
+        .orderBy(desc(transactions.createdAt));
 
       return {
-        balance: row.balance,
+        transactions: result.map((row) => ({
+          ...row,
+          id: String(row.id),
+          partnerId: String(row.partnerId),
+          qrCodeId: row.qrCodeId ? String(row.qrCodeId) : null,
+        })),
       };
     },
     {
       beforeHandle: requireEmployee,
+      response: {
+        200: t.Object({
+          transactions: t.Array(
+            t.Object({
+              id: t.String(),
+              partnerId: t.String(),
+              qrCodeId: t.Union([t.String(), t.Null()]),
+              amountCents: t.Integer(),
+              idempotencyKey: t.String(),
+              createdAt: t.String(),
+            })
+          ),
+        }),
+        401: errorSchema,
+        403: errorSchema,
+      },
+      detail: { summary: "Transaction history for the logged-in employee", tags: ["employee"] },
     }
   )
+  .post("/qrcode", async ({ authUser, qrJwt, set }) => {
+      const jti = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  .get("/transactions", async ({ user }) => {
-    const result = await database
-      .select({
-        id: transactions.id,
-        partnerId: transactions.partnerId,
-        qrCodeId: transactions.qrCodeId,
-        amount: transactions.amount,
-        idempotencyKey: transactions.idempotencyKey,
-        createdAt: transactions.createdAt,
-      })
-      .from(transactions)
-      .where(eq(transactions.employeeId, user.id))
-      .orderBy(desc(transactions.createdAt));
+      await database.insert(qrCodes).values({
+        employeeId: authUser!.id,
+        token: jti,
+        expiresAt: expiresAt.toISOString(),
+      });
 
-      return {
-        transactions: result,
-      };
+      const token = await qrJwt.sign({ employeeId: String(authUser!.id), jti });
+
+      set.status = 201;
+      return { token, expiresAt: expiresAt.toISOString() };
     },
     {
-      beforeHandle: requireEmployee,
+      beforeHandle: requireActiveEmployee,
+      response: {
+        201: t.Object({ token: t.String(), expiresAt: t.String() }),
+        401: errorSchema,
+        403: errorSchema,
+      },
+      detail: {
+        summary: "Generate a single-use payment QR code",
+        tags: ["employee"],
+      },
     }
   );
