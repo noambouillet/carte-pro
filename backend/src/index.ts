@@ -1,13 +1,25 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { openapi } from "@elysia/openapi";
 import { cors } from "@elysia/cors";
 import { sql } from "drizzle-orm";
 
 import { database } from "./config/database";
 import { PORT, FRONTEND_URL } from "./config/env";
+import { authRoutes } from "./routes/auth.route"
 import { adminRoutes } from "./routes/admin.routes";
 import { employeeRoutes } from "./routes/employee.routes";
 import { partnersRoutes } from "./routes/partners.routes";
+
+const packageJson = await Bun.file("package.json").json();
+
+async function checkDatabaseConnection(): Promise<boolean> {
+  try {
+    await database.execute(sql`select 1`);
+    return true
+  } catch {
+    return false
+  }
+}
 
 async function initializeDatabase() {
   await database.execute(sql`select 1`);
@@ -34,19 +46,45 @@ async function start() {
           documentation: {
             info: {
               title: "API Ticket Tout",
-              version: "1.0.0",
+              version: packageJson.version,
             },
           },
         })
       )
-      .get("/health", () => ({ status: "ok" as const }))
+      .get('/health', async ({ set }) => {
+        const isDbHealthy = await checkDatabaseConnection()
+
+        if (!isDbHealthy) {
+          set.status = 503
+          return {
+            version: packageJson.version, services: { database: 'unhealthy' }
+          }
+        }
+        return { version: packageJson.version, services: { database: 'healthy' } };
+      }, {
+        response: {
+          200: t.Object({
+            version: t.String(),
+            services: t.Object({
+              database: t.Literal("healthy"),
+            }),
+          }),
+          503: t.Object({
+            version: t.String(),
+            services: t.Object({
+              database: t.Literal("unhealthy"),
+            }),
+          }),
+        },
+      })
       .get("/", () => "Hello Ticket Tout")
+      .use(authRoutes)
       .use(adminRoutes)
       .use(partnersRoutes)
       .use(employeeRoutes)
       .listen(PORT);
 
-    console.log(`Elysia is running on port ${app.server?.port}`);
+    console.log(`Ticket Tout is running on port http://${app.server?.hostname}:${app.server?.port}`);
   } catch (error) {
     console.error("Failed to start application:", error);
     process.exit(1);

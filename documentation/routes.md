@@ -6,7 +6,7 @@
 
 /api/employee/login
 /api/employee/register
-/api/employee/balance (Consultation du solde disponible sur la CartePro)
+/api/employee/balance (Consultation du solde disponible sur le TicketTout)
 /api/employee/transactions (Historique des transactions effectuées)
 /api/employee/qrcode (Génération d'un QR code de paiement à présenter chez les partenaires)
 

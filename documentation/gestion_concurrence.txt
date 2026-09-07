@@ -1,0 +1,12 @@
+Gestion de la concurrence et protection du solde
+
+Lors de deux encaissements simultanés d'un même salarié, la concurrence est maîtrisée au niveau de la base de données via un verrou transactionnel applicatif :
+
+Mécanisme : Dans la fonction check_sufficient_balance(), exécutée via le trigger BEFORE INSERT ON transactions, l'instruction PERFORM pg_advisory_xact_lock(NEW.employee_id) pose un verrou exclusif sur l'identifiant du salarié (CF backend/db/init.sql).
+Comportement en cas de concurrence : La première transaction verrouille l'ID du salarié. La seconde transaction est mise en attente stricte à cette ligne.
+
+Déroulement :
+- La Transaction 1 lit le solde via la vue employee_balances, vérifie qu'il est suffisant, insère le débit et libère le verrou à son COMMIT.
+- La Transaction 2 reprend immédiatement la main, relit le solde à jour (diminué du montant prélevé par T1), constate que le solde disponible est désormais insuffisant et lève une exception insufficient_balance sans altérer les données.
+
+Garanties complémentaires : L'idempotence des requêtes et le réemploi des QR codes sont garantis par les index uniques idx_transactions_partner_idempotency et idx_transactions_qr_code_id, rejetant tout doublon d'exécution en amont.

@@ -9,20 +9,8 @@ function Footer() {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="footer-brand">
-          <div className="footer-identity">
-            <span className="brand-flag" aria-hidden="true" />
-            <span className="brand-ministry">
-              Ministère
-              <br />
-              du job
-              <br />
-              et bonheur
-            </span>
-          </div>
-
           <p className="footer-note">
-            Ticket Tout est un dispositif d&apos;avantages salariés dématérialisés
-            opéré par le Ministère du Job et Bonheur.
+            Ticket Tout est un dispositif d&apos;avantages salariés dématérialisés fictif.
           </p>
         </div>
 

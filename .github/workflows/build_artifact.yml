@@ -1,0 +1,74 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: bun install --frozen-lockfile
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          mkdir -p dist
+          bun build src/index.ts --outdir dist --target=bun
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Prepare build artifact
+        run: |
+          rm -rf build
+          mkdir -p build/backend
+          mkdir -p build/frontend
+
+          cp -r backend/dist/. build/backend/
+          cp -r frontend/dist/. build/frontend/
+
+          cp backend/package.json build/backend/
+          cp frontend/package.json build/frontend/
+
+          if [ -f backend/.env.example ]; then
+            cp backend/.env.example build/backend/.env.example
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: survivor-build
+          path: build/
+          if-no-files-found: error
+          retention-days: 7

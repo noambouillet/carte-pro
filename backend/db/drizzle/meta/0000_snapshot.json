@@ -1,0 +1,797 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.partners": {
+      "name": "partners",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "siren": {
+          "name": "siren",
+          "type": "char(9)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "objet_social": {
+          "name": "objet_social",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "citext",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "partner_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_partners_status": {
+          "name": "idx_partners_status",
+          "columns": [
+            {
+              "expression": "status",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "enum_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "partners_email_key": {
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false,
+          "name": "partners_email_key"
+        }
+      },
+      "checkConstraints": {
+        "partners_siren_check": {
+          "name": "partners_siren_check",
+          "value": "siren ~ '^\\d{9}$'::text"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.partner_validation_decisions": {
+      "name": "partner_validation_decisions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "partner_id": {
+          "name": "partner_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "agent_id": {
+          "name": "agent_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decision": {
+          "name": "decision",
+          "type": "partner_decision",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_partner_validation_decisions_partner_id": {
+          "name": "idx_partner_validation_decisions_partner_id",
+          "columns": [
+            {
+              "expression": "partner_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "partner_validation_decisions_partner_id_fkey": {
+          "name": "partner_validation_decisions_partner_id_fkey",
+          "tableFrom": "partner_validation_decisions",
+          "tableTo": "partners",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "partner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "partner_validation_decisions_agent_id_fkey": {
+          "name": "partner_validation_decisions_agent_id_fkey",
+          "tableFrom": "partner_validation_decisions",
+          "tableTo": "admin_agents",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "agent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.admin_agents": {
+      "name": "admin_agents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "citext",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "admin_agents_email_key": {
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false,
+          "name": "admin_agents_email_key"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.qr_codes": {
+      "name": "qr_codes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_qr_codes_employee_id": {
+          "name": "idx_qr_codes_employee_id",
+          "columns": [
+            {
+              "expression": "employee_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "qr_codes_employee_id_fkey": {
+          "name": "qr_codes_employee_id_fkey",
+          "tableFrom": "qr_codes",
+          "tableTo": "employees",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "qr_codes_token_key": {
+          "columns": [
+            "token"
+          ],
+          "nullsNotDistinct": false,
+          "name": "qr_codes_token_key"
+        }
+      },
+      "checkConstraints": {
+        "qr_codes_check": {
+          "name": "qr_codes_check",
+          "value": "expires_at <= (created_at + '00:05:00'::interval)"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.employees": {
+      "name": "employees",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "citext",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "employee_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "employees_email_key": {
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false,
+          "name": "employees_email_key"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.credit_grants": {
+      "name": "credit_grants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "granted_at": {
+          "name": "granted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_credit_grants_employee_id": {
+          "name": "idx_credit_grants_employee_id",
+          "columns": [
+            {
+              "expression": "employee_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "credit_grants_employee_id_fkey": {
+          "name": "credit_grants_employee_id_fkey",
+          "tableFrom": "credit_grants",
+          "tableTo": "employees",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "credit_grants_amount_check": {
+          "name": "credit_grants_amount_check",
+          "value": "amount > (0)::numeric"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.transactions": {
+      "name": "transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "partner_id": {
+          "name": "partner_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "qr_code_id": {
+          "name": "qr_code_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_transactions_employee_id": {
+          "name": "idx_transactions_employee_id",
+          "columns": [
+            {
+              "expression": "employee_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_transactions_partner_idempotency": {
+          "name": "idx_transactions_partner_idempotency",
+          "columns": [
+            {
+              "expression": "partner_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            },
+            {
+              "expression": "idempotency_key",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_transactions_qr_code_id": {
+          "name": "idx_transactions_qr_code_id",
+          "columns": [
+            {
+              "expression": "qr_code_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int8_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "where": "(qr_code_id IS NOT NULL)",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "transactions_employee_id_fkey": {
+          "name": "transactions_employee_id_fkey",
+          "tableFrom": "transactions",
+          "tableTo": "employees",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "transactions_partner_id_fkey": {
+          "name": "transactions_partner_id_fkey",
+          "tableFrom": "transactions",
+          "tableTo": "partners",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "partner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "transactions_qr_code_id_fkey": {
+          "name": "transactions_qr_code_id_fkey",
+          "tableFrom": "transactions",
+          "tableTo": "qr_codes",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "qr_code_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "transactions_amount_check": {
+          "name": "transactions_amount_check",
+          "value": "amount > (0)::numeric"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.transaction_reversals": {
+      "name": "transaction_reversals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "agent_id": {
+          "name": "agent_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transaction_reversals_transaction_id_fkey": {
+          "name": "transaction_reversals_transaction_id_fkey",
+          "tableFrom": "transaction_reversals",
+          "tableTo": "transactions",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "transaction_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "transaction_reversals_agent_id_fkey": {
+          "name": "transaction_reversals_agent_id_fkey",
+          "tableFrom": "transaction_reversals",
+          "tableTo": "admin_agents",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "agent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "transaction_reversals_transaction_id_key": {
+          "columns": [
+            "transaction_id"
+          ],
+          "nullsNotDistinct": false,
+          "name": "transaction_reversals_transaction_id_key"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.employee_status": {
+      "name": "employee_status",
+      "values": [
+        "active",
+        "inactive"
+      ],
+      "schema": "public"
+    },
+    "public.partner_decision": {
+      "name": "partner_decision",
+      "values": [
+        "approved",
+        "rejected"
+      ],
+      "schema": "public"
+    },
+    "public.partner_status": {
+      "name": "partner_status",
+      "values": [
+        "pending",
+        "validated",
+        "rejected"
+      ],
+      "schema": "public"
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {
+    "public.employee_balances": {
+      "name": "employee_balances",
+      "schema": "public",
+      "columns": {
+        "employee_id": {
+          "name": "employee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "balance": {
+          "name": "balance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "isExisting": false,
+      "definition": "SELECT e.id AS employee_id, COALESCE(g.total_granted, 0::numeric) - COALESCE(t.total_debited, 0::numeric) AS balance FROM employees e LEFT JOIN ( SELECT credit_grants.employee_id, sum(credit_grants.amount) AS total_granted FROM credit_grants GROUP BY credit_grants.employee_id) g ON g.employee_id = e.id LEFT JOIN ( SELECT tr.employee_id, sum(tr.amount) AS total_debited FROM transactions tr LEFT JOIN transaction_reversals rv ON rv.transaction_id = tr.id WHERE rv.id IS NULL GROUP BY tr.employee_id) t ON t.employee_id = e.id",
+      "materialized": false
+    }
+  },
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {}
+  }
+}

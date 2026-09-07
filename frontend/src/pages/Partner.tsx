@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Network from './Network'
-import { Amount, SimulationNotice } from '../components/simulation'
+import { Amount, SimulationNotice } from '../components/Simulation'
 import './Partner.css'
 
 type Period = 'jour' | 'semaine' | 'mois'
@@ -31,7 +31,7 @@ const periods: { id: Period; label: string }[] = [
 
 const data: Record<Period, PeriodData> = {
   jour: {
-    caption: 'Dimanche 30 août 2026 — montants encaissés par tranche horaire',
+    caption: 'Dimanche 30 août 2026 - montants encaissés par tranche horaire',
     bars: [
       { label: '08 h', value: 74 },
       { label: '10 h', value: 118 },
@@ -42,7 +42,7 @@ const data: Record<Period, PeriodData> = {
     ],
     kpis: [
       {
-        label: 'Montant reçu — 30 août 2026',
+        label: 'Montant reçu - 30 août 2026',
         value: '502,00 €',
         hint: '− 38,7 % par rapport à samedi',
       },
@@ -54,7 +54,7 @@ const data: Record<Period, PeriodData> = {
     ],
   },
   semaine: {
-    caption: 'Semaine du 24 au 30 août 2026 — montants encaissés',
+    caption: 'Semaine du 24 au 30 août 2026 - montants encaissés',
     bars: [
       { label: 'lun. 24', value: 482 },
       { label: 'mar. 25', value: 596 },
@@ -66,7 +66,7 @@ const data: Record<Period, PeriodData> = {
     ],
     kpis: [
       {
-        label: 'Montant reçu — semaine du 24 août',
+        label: 'Montant reçu - semaine du 24 août',
         value: '4 312,60 €',
         hint: '+ 8,4 % par rapport à la semaine précédente',
       },
@@ -78,7 +78,7 @@ const data: Record<Period, PeriodData> = {
     ],
   },
   mois: {
-    caption: 'Août 2026 — montants encaissés par semaine',
+    caption: 'Août 2026 - montants encaissés par semaine',
     bars: [
       { label: '1re sem.', value: 3964 },
       { label: '2e sem.', value: 4187 },
@@ -87,7 +87,7 @@ const data: Record<Period, PeriodData> = {
     ],
     kpis: [
       {
-        label: 'Montant reçu — août 2026',
+        label: 'Montant reçu - août 2026',
         value: '16 980,00 €',
         hint: '+ 8,4 % par rapport à juillet',
       },
