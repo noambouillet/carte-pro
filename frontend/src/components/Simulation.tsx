@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import './simulation.css'
+import './Simulation.css'
 
 export function SimulationNotice() {
   return (

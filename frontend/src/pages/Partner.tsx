@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Network from './Network'
-import { Amount, SimulationNotice } from '../components/simulation'
+import { Amount, SimulationNotice } from '../components/Simulation'
 import './Partner.css'
 
 type Period = 'jour' | 'semaine' | 'mois'

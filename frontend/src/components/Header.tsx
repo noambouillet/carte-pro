@@ -1,29 +1,32 @@
 import './Header.css'
+import { logout } from '../api/Auth'
 
 type HeaderProps = {
   onHome: () => void
-  onEmployee: () => void
-  onPartner: () => void
-  onAdmin: () => void
   onBecomePartner: () => void
   onLogin: () => void
+  onLogout: () => void
+  isLoggedIn: boolean
 }
 
 function Header({
   onHome,
-  onEmployee,
-  onPartner,
-  // onAdmin,
   onBecomePartner,
   onLogin,
+  onLogout,
+  isLoggedIn,
 }: HeaderProps) {
-  return (
-    <header className="site-header">
-      <div className="brand-rule" aria-hidden="true">
-        <span className="brand-rule-blue" />
-        <span className="brand-rule-red" />
-      </div>
+  async function handleLogout() {
+    try {
+      await logout()
+      onLogout()
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion :', error)
+    }
+  }
 
+  return (
+    <header className="site-header">  
       <div className="site-header-inner">
         <button
           className="brand"
@@ -31,14 +34,6 @@ function Header({
           onClick={onHome}
           aria-label="Ticket Tout, retour à l'accueil"
         >
-          <span className="brand-flag" aria-hidden="true" />
-          <span className="brand-ministry">
-            Ministère
-            <br />
-            du job
-            <br />
-            et bonheur
-          </span>
 
           <span className="brand-separator" aria-hidden="true" />
 
@@ -49,30 +44,24 @@ function Header({
             </span>
           </span>
         </button>
-
-        <nav className="site-nav site-nav-roles" aria-label="Espaces">
-          <button className="nav-role-button" type="button" onClick={onEmployee}>
-            Salarié
-          </button>
-          <button
-            className="nav-role-button"
-            type="button"
-            onClick={onPartner}
-          >
-            Partenaire
-          </button>
-          {/* <button className="nav-role-button" type="button" onClick={onAdmin}>
-            Admin
-          </button> */}
-        </nav>
-
         <nav className="site-nav site-nav-actions" aria-label="Navigation principale">
-          <button className="nav-link" type="button" onClick={onBecomePartner}>
-            Devenir partenaire
-          </button>
-          <button className="nav-button" type="button" onClick={onLogin}>
-            Se connecter
-          </button>
+          {!isLoggedIn && (
+            <button className="nav-link" type="button" onClick={onBecomePartner}>
+              Devenir partenaire
+            </button>
+          )}
+          
+          {!isLoggedIn && (
+            <button className="nav-button" type="button" onClick={onLogin}>
+              Se connecter
+            </button>
+          )}
+
+          {isLoggedIn && (
+            <button className="nav-button" type="button" onClick={handleLogout}>
+              Se déconnecter
+            </button>
+          )}
         </nav>
       </div>
     </header>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { cleanSiren, formatSiren, validateSiren } from '../components/siren'
+import { cleanSiren, formatSiren, validateSiren } from '../components/Siren'
+import { registerEmployee, registerPartner } from '../api/Register'
 import './Register.css'
 
 type CreateAccountProps = {
@@ -10,22 +11,59 @@ const PURPOSE_MIN = 10
 
 function CreateAccount({ onBackToLogin }: CreateAccountProps) {
   const [role, setRole] = useState('')
-  const [siren, setSiren] = useState('')
-  const [purpose, setPurpose] = useState('')
   const [touched, setTouched] = useState({ siren: false, purpose: false })
   const [submitted, setSubmitted] = useState(false)
+
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [siren, setSiren] = useState('')
+  const [socialPurpose, setSocialPurpose] = useState('')
+  const [establishmentName, setEstablishmentName] = useState('')
+  const [establishmentAddress, setEstablishmentAddress] = useState('')
+  const [establishmentPhone, setEstablishmentPhone] = useState('')
 
   const isPartner = role === 'partner'
 
   const sirenError = isPartner ? validateSiren(siren) : null
   const purposeError =
-    isPartner && purpose.trim().length < PURPOSE_MIN
+    isPartner && socialPurpose.trim().length < PURPOSE_MIN
       ? `Décrivez l'activité en ${PURPOSE_MIN} caractères minimum.`
       : null
 
   const showSirenError = Boolean(sirenError) && (touched.siren || submitted)
   const showPurposeError =
     Boolean(purposeError) && (touched.purpose || submitted)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmitted(true)
+    try {
+      if (role === 'employee') {
+        console.log('Registering employee:', firstName, lastName, email)
+        await registerEmployee(firstName, lastName, email, password)
+      } else if (role === 'partner') {
+        await registerPartner(
+            firstName,
+            lastName,
+            email,
+            password,
+            cleanSiren(siren),
+            socialPurpose,
+            establishmentName,
+            establishmentAddress,
+            establishmentPhone
+        )
+      }
+      
+      onBackToLogin()
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription :', error)
+    }
+  }
 
   return (
     <section className="login-card" aria-label="Création de compte">
@@ -38,18 +76,27 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
       <form
         className="login-form"
         noValidate
-        onSubmit={(event) => {
-          event.preventDefault()
-          setSubmitted(true)
-          window.location.href = '/'
-        }}
+        onSubmit={handleSubmit}
       >
         <div className="field-group">
-          <label htmlFor="fullname">Nom complet</label>
+          <label htmlFor="firstname">Prénom</label>
           <input
-            id="fullname"
+            id="firstname"
             type="text"
-            placeholder="Exemple : Jean Dupont"
+            placeholder="Jean"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+          />
+        </div>
+
+        <div className="field-group">
+          <label htmlFor="lastname">Nom</label>
+          <input
+            id="lastname"
+            type="text"
+            placeholder="Dupont"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
           />
         </div>
 
@@ -58,7 +105,9 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
           <input
             id="create-email"
             type="email"
-            placeholder="Exemple : nom@domaine.gouv.fr"
+            placeholder="jean.dupont@domaine.gouv.fr"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
           />
         </div>
 
@@ -67,7 +116,9 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
           <input
             id="create-password"
             type="password"
-            placeholder="Créez votre mot de passe"
+            placeholder="Entrez votre mot de passe"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
           />
         </div>
 
@@ -77,6 +128,8 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
             id="confirm-password"
             type="password"
             placeholder="Confirmez votre mot de passe"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
           />
         </div>
 
@@ -105,7 +158,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
                 inputMode="numeric"
                 autoComplete="off"
                 value={formatSiren(siren)}
-                placeholder="Exemple : 732 829 320"
+                placeholder="732 829 320"
                 aria-invalid={showSirenError || undefined}
                 aria-describedby={showSirenError ? 'siren-error' : 'siren-hint'}
                 onChange={(event) => setSiren(cleanSiren(event.target.value))}
@@ -128,13 +181,13 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
                 id="purpose"
                 type="text"
                 maxLength={160}
-                value={purpose}
-                placeholder="Exemple : boulangerie-pâtisserie artisanale"
+                value={socialPurpose}
+                placeholder="boulangerie-pâtisserie artisanale"
                 aria-invalid={showPurposeError || undefined}
                 aria-describedby={
                   showPurposeError ? 'purpose-error' : 'purpose-hint'
                 }
-                onChange={(event) => setPurpose(event.target.value)}
+                onChange={(event) => setSocialPurpose(event.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, purpose: true }))}
               />
               {showPurposeError ? (
@@ -143,14 +196,51 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
                 </p>
               ) : (
                 <p className="field-hint" id="purpose-hint">
-                  Activité principale déclarée lors de l&apos;immatriculation.
+                  Activité principale déclarée lors de l'immatriculation.
                 </p>
               )}
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="name">Nom de l'établissement</label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Boulangerie Dupont"
+                value={establishmentName}
+                onChange={(event) => setEstablishmentName(event.target.value)}
+              />
+
+            </div>
+            
+            <div className="field-group">
+              <label htmlFor="address">Adresse de l'établissement</label>
+              <input
+                id="address"
+                type="text"
+                placeholder="12 rue de la République, 75001 Paris"
+                value={establishmentAddress}
+                onChange={(event) => setEstablishmentAddress(event.target.value)}
+              />
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="phone">Numéro de téléphone (public)</label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="01 23 45 67 89"
+                value={establishmentPhone}
+                onChange={(event) => setEstablishmentPhone(event.target.value)}
+              />
             </div>
           </>
         )}
 
-        <button className="primary-button" type="submit">
+        <button
+          className="primary-button"
+          type="submit"
+        >
           Créer mon compte
         </button>
 

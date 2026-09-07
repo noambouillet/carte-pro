@@ -3,6 +3,7 @@ CREATE EXTENSION IF NOT EXISTS citext;
 CREATE TYPE employee_status AS ENUM ('active', 'inactive');
 CREATE TYPE partner_status AS ENUM ('pending', 'validated', 'rejected');
 CREATE TYPE partner_decision AS ENUM ('approved', 'rejected');
+CREATE TYPE transaction_attempt_status AS ENUM ('refused_insufficient_balance');
 
 CREATE TABLE employees (
     id            BIGSERIAL PRIMARY KEY,
@@ -19,6 +20,7 @@ CREATE TABLE partners (
     name          TEXT NOT NULL,
     siren         CHAR(9) NOT NULL CHECK (siren ~ '^\d{9}$'),
     objet_social  TEXT NOT NULL,
+    address        TEXT NOT NULL,
     email         CITEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     status        partner_status NOT NULL DEFAULT 'pending',
@@ -50,7 +52,7 @@ CREATE INDEX idx_partner_validation_decisions_partner_id ON partner_validation_d
 CREATE TABLE credit_grants (
     id           BIGSERIAL PRIMARY KEY,
     employee_id  BIGINT NOT NULL REFERENCES employees (id),
-    amount       NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+    amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
     granted_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -68,12 +70,14 @@ CREATE TABLE qr_codes (
 
 CREATE INDEX idx_qr_codes_employee_id ON qr_codes (employee_id);
 
+CREATE SEQUENCE transaction_events_id_seq;
+
 CREATE TABLE transactions (
-    id               BIGSERIAL PRIMARY KEY,
+    id               BIGINT PRIMARY KEY DEFAULT nextval('transaction_events_id_seq'),
     employee_id      BIGINT NOT NULL REFERENCES employees (id),
     partner_id       BIGINT NOT NULL REFERENCES partners (id),
     qr_code_id       BIGINT REFERENCES qr_codes (id),
-    amount           NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+    amount_cents     BIGINT NOT NULL CHECK (amount_cents > 0),
     idempotency_key  TEXT NOT NULL,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -81,6 +85,22 @@ CREATE TABLE transactions (
 CREATE UNIQUE INDEX idx_transactions_qr_code_id ON transactions (qr_code_id) WHERE qr_code_id IS NOT NULL;
 CREATE UNIQUE INDEX idx_transactions_partner_idempotency ON transactions (partner_id, idempotency_key);
 CREATE INDEX idx_transactions_employee_id ON transactions (employee_id);
+CREATE INDEX idx_transactions_created_at ON transactions (created_at);
+
+CREATE TABLE transaction_attempts (
+    id               BIGINT PRIMARY KEY DEFAULT nextval('transaction_events_id_seq'),
+    employee_id      BIGINT NOT NULL REFERENCES employees (id),
+    partner_id       BIGINT NOT NULL REFERENCES partners (id),
+    qr_code_id       BIGINT REFERENCES qr_codes (id),
+    amount_cents     BIGINT NOT NULL CHECK (amount_cents > 0),
+    status           transaction_attempt_status NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    attempted_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_transaction_attempts_employee_id ON transaction_attempts (employee_id);
+CREATE INDEX idx_transaction_attempts_attempted_at ON transaction_attempts (attempted_at);
+CREATE UNIQUE INDEX idx_transaction_attempts_partner_idempotency ON transaction_attempts (partner_id, idempotency_key);
 
 CREATE TABLE transaction_reversals (
     id              BIGSERIAL PRIMARY KEY,
@@ -93,20 +113,47 @@ CREATE TABLE transaction_reversals (
 CREATE VIEW employee_balances AS
 SELECT
     e.id AS employee_id,
-    COALESCE(g.total_granted, 0) - COALESCE(t.total_debited, 0) AS balance
+    COALESCE(g.total_granted_cents, 0)
+        - COALESCE(t.total_debited_cents, 0) AS balance_cents
 FROM employees e
 LEFT JOIN (
-    SELECT employee_id, SUM(amount) AS total_granted
+    SELECT
+        employee_id,
+        SUM(amount_cents) AS total_granted_cents
     FROM credit_grants
     GROUP BY employee_id
 ) g ON g.employee_id = e.id
 LEFT JOIN (
-    SELECT tr.employee_id, SUM(tr.amount) AS total_debited
+    SELECT
+        tr.employee_id,
+        SUM(tr.amount_cents) AS total_debited_cents
     FROM transactions tr
-    LEFT JOIN transaction_reversals rv ON rv.transaction_id = tr.id
+    LEFT JOIN transaction_reversals rv
+        ON rv.transaction_id = tr.id
     WHERE rv.id IS NULL
     GROUP BY tr.employee_id
 ) t ON t.employee_id = e.id;
+
+CREATE VIEW transaction_history AS
+SELECT
+    t.id,
+    t.created_at AS occurred_at,
+    t.employee_id,
+    t.partner_id,
+    t.amount_cents,
+    'approved'::TEXT AS status
+FROM transactions t
+
+UNION ALL
+
+SELECT
+    a.id,
+    a.attempted_at AS occurred_at,
+    a.employee_id,
+    a.partner_id,
+    a.amount_cents,
+    a.status::TEXT AS status
+FROM transaction_attempts a;
 
 CREATE OR REPLACE FUNCTION forbid_transaction_mutation()
 RETURNS TRIGGER AS $$
@@ -119,20 +166,102 @@ CREATE TRIGGER trg_forbid_transaction_update
 BEFORE UPDATE OR DELETE ON transactions
 FOR EACH ROW EXECUTE FUNCTION forbid_transaction_mutation();
 
+CREATE TRIGGER trg_forbid_transaction_attempt_mutation
+BEFORE UPDATE OR DELETE ON transaction_attempts
+FOR EACH ROW EXECUTE FUNCTION forbid_transaction_mutation();
+
+CREATE OR REPLACE FUNCTION process_payment(
+    p_partner_id BIGINT,
+    p_employee_id BIGINT,
+    p_qr_code_id BIGINT,
+    p_amount_cents BIGINT,
+    p_idempotency_key TEXT
+)
+RETURNS TABLE (
+    transaction_id BIGINT,
+    status TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_balance BIGINT;
+    v_transaction_id BIGINT;
+    v_attempt_status transaction_attempt_status;
+BEGIN
+    SELECT id INTO v_transaction_id
+    FROM transactions
+    WHERE partner_id = p_partner_id AND idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+        RETURN QUERY SELECT v_transaction_id, 'approved'::TEXT;
+        RETURN;
+    END IF;
+
+    SELECT status INTO v_attempt_status
+    FROM transaction_attempts
+    WHERE partner_id = p_partner_id AND idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+        RETURN QUERY SELECT NULL::BIGINT, v_attempt_status::TEXT;
+        RETURN;
+    END IF;
+
+    PERFORM 1 FROM employees WHERE id = p_employee_id AND status = 'active' FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'employee does not exist or is inactive';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM partners WHERE id = p_partner_id AND status = 'validated') THEN
+        RAISE EXCEPTION 'partner is not validated';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM qr_codes
+        WHERE id = p_qr_code_id AND employee_id = p_employee_id
+          AND used_at IS NULL AND now() < expires_at
+    ) THEN
+        RAISE EXCEPTION 'invalid or expired QR code';
+    END IF;
+
+    SELECT balance_cents INTO v_balance FROM employee_balances WHERE employee_id = p_employee_id;
+    v_balance := COALESCE(v_balance, 0);
+
+    IF v_balance < p_amount_cents THEN
+        INSERT INTO transaction_attempts (
+            employee_id, partner_id, qr_code_id, amount_cents, status, idempotency_key
+        ) VALUES (
+            p_employee_id, p_partner_id, p_qr_code_id, p_amount_cents,
+            'refused_insufficient_balance', p_idempotency_key
+        );
+
+        RETURN QUERY SELECT NULL::BIGINT, 'refused_insufficient_balance'::TEXT;
+        RETURN;
+    END IF;
+
+    INSERT INTO transactions (employee_id, partner_id, qr_code_id, amount_cents, idempotency_key)
+    VALUES (p_employee_id, p_partner_id, p_qr_code_id, p_amount_cents, p_idempotency_key)
+    RETURNING id INTO v_transaction_id;
+
+    UPDATE qr_codes SET used_at = now() WHERE id = p_qr_code_id AND used_at IS NULL;
+
+    RETURN QUERY SELECT v_transaction_id, 'approved'::TEXT;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION check_sufficient_balance()
 RETURNS TRIGGER AS $$
 DECLARE
-    current_balance NUMERIC(10,2);
+    current_balance BIGINT;
 BEGIN
     PERFORM pg_advisory_xact_lock(NEW.employee_id);
 
-    SELECT balance INTO current_balance
-    FROM employee_balances
-    WHERE employee_id = NEW.employee_id;
+    SELECT balance_cents INTO current_balance FROM employee_balances WHERE employee_id = NEW.employee_id;
 
-    IF current_balance IS NULL OR current_balance < NEW.amount THEN
-        RAISE EXCEPTION 'insufficient_balance: employee % has balance % available, transaction requests %',
-            NEW.employee_id, COALESCE(current_balance, 0), NEW.amount;
+    IF current_balance IS NULL OR current_balance < NEW.amount_cents THEN
+        RAISE EXCEPTION
+            'insufficient_balance: employee % has % cents available, transaction requests % cents',
+            NEW.employee_id, COALESCE(current_balance, 0), NEW.amount_cents;
     END IF;
 
     RETURN NEW;
