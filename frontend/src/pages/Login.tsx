@@ -1,25 +1,35 @@
 import './Login.css'
 import { useState } from 'react'
-import { login } from '../api/Login'
+import { login } from '../api/Auth'
 
 type LoginProps = {
   onCreateAccount: () => void
+  onLoginSuccess: (role: string) => void
 }
 
-function Login({ onCreateAccount }: LoginProps) {
+function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     try {
-      const response = await login(email, password)
+      const response = await login({ email, password })
       console.log('Login successful:', response)
+      if (response.role === 'employee') {
+        onLoginSuccess('employee')
+      } else if (response.role === 'partner') {
+        onLoginSuccess('partner')
+      } else if (response.role === 'admin') {
+        onLoginSuccess('admin')
+      } else {
+        console.error('Unknown role:', response.role)
+      }
     } catch (error) {
       console.error('Login failed:', error)
     }
   }
-    
+
   return (
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>

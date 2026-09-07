@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import './shared.css'
-import Admin from './pages/Admin.tsx'
-import CreateAccount from './pages/Register.tsx'
-import Footer from './components/Footer.tsx'
-import Header from './components/Header.tsx'
-import Home from './pages/LandingPage.tsx'
-import LoginView from './pages/Login.tsx'
-import Partner from './pages/Partner.tsx'
-import Employee from './pages/Employee.tsx'
+import Admin from './pages/Admin'
+import CreateAccount from './pages/Register'
+import Footer from './components/Footer'
+import Header from './components/Header'
+import Home from './pages/LandingPage'
+import Login from './pages/Login'
+import Partner from './pages/Partner'
+import Employee from './pages/Employee'
 
 type Screen = 'home' | 'login' | 'create' | 'employee' | 'partner' | 'admin'
 
@@ -16,6 +16,7 @@ const wideScreens: Screen[] = ['home', 'employee', 'partner', 'admin']
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -30,6 +31,11 @@ function App() {
         onAdmin={() => setScreen('admin')}
         onBecomePartner={() => setScreen('create')}
         onLogin={() => setScreen('login')}
+        isLoggedIn={isLoggedIn}
+        onLogout={() => {
+          setIsLoggedIn(false)
+          setScreen('home')
+        }}
       />
 
       <main
@@ -42,12 +48,30 @@ function App() {
         {screen === 'home' && (
           <Home
             onLogin={() => setScreen('login')}
-            onPartner={() => setScreen('login')}
+            onBecomePartner={() => setScreen('create')}
+            onEmployee={() => setScreen('employee')}
+            onAdmin={() => setScreen('admin')}
+            onPartner={() => setScreen('partner')}
+            isLoggedIn={isLoggedIn}
           />
         )}
 
         {screen === 'login' && (
-          <LoginView onCreateAccount={() => setScreen('create')} />
+          <Login
+            onCreateAccount={() => setScreen('create')} 
+            onLoginSuccess={(role) => {
+              if (role === 'employee') {
+                setScreen('employee')
+                setIsLoggedIn(true)
+              } else if (role === 'partner') {
+                setScreen('partner')
+                setIsLoggedIn(true)
+              } else if (role === 'admin') {
+                setScreen('admin')
+                setIsLoggedIn(true)
+              }
+            }}
+          />
         )}
 
         {screen === 'create' && (

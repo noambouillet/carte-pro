@@ -12,12 +12,12 @@ export interface LoginResponse {
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>("/api/v1/auth/login", payload);
+  const { data } = await api.post<LoginResponse>("/auth/login", payload);
   return data;
 }
 
 export async function logout(): Promise<void> {
-  await api.post("/api/v1/auth/logout");
+  await api.post("/auth/logout");
 }
 
 export interface EmployeeMe {
@@ -52,6 +52,6 @@ export interface AdminMe {
 export type MeResponse = EmployeeMe | PartnerMe | AdminMe;
 
 export async function getMe(): Promise<MeResponse> {
-  const { data } = await api.get<MeResponse>("/api/v1/auth/me");
+  const { data } = await api.get<MeResponse>("/auth/me");
   return data;
 }
