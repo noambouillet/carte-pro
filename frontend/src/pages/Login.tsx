@@ -86,9 +86,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
       </form>
 
       <p className="legal">
-        En continuant, vous acceptez les conditions générales d'utilisation.
-        Ce site est protégé par les systèmes de
-        sécurité de l'État.
+        En continuant, vous acceptez les conditions générales d&apos;utilisation.
       </p>
     </section>
   )

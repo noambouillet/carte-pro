@@ -9,11 +9,11 @@ function Footer() {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="footer-brand">
-          <p className="footer-note">
-            CartePro est un dispositif d&apos;avantages salariés dématérialisés fictif.
+          <p className="footer-disclaimer">
+            Démonstrateur technique, ne constitue pas un service public en
+            exploitation.
           </p>
         </div>
-
         <nav className="footer-nav" aria-label="Liens de bas de page">
           <ul>
             {footerLinks.map((label) => (
