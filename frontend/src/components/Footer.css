@@ -30,7 +30,7 @@
   height: 34px;
 }
 
-.footer-identity .brand-ministry {
+.footer-identity .brand {
   display: flex;
   flex-direction: column;
   font-size: 0.82rem;

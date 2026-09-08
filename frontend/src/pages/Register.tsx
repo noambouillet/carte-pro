@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cleanSiren, formatSiren, validateSiren } from '../components/Siren'
-import { registerEmployee, registerPartner } from '../api/Register'
+import { registerEmployee } from '../api/Employee'
+import { registerPartner } from '../api/Partners'
 import './Register.css'
 
 type CreateAccountProps = {
@@ -44,7 +45,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
     try {
       if (role === 'employee') {
         console.log('Registering employee:', firstName, lastName, email)
-        await registerEmployee(firstName, lastName, email, password)
+        await registerEmployee({ first_name: firstName, last_name: lastName, email, password })
       } else if (role === 'partner') {
         await registerPartner(
             firstName,
@@ -58,7 +59,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
             establishmentPhone
         )
       }
-      
+
       onBackToLogin()
     } catch (error) {
       console.error('Erreur lors de l\'inscription :', error)
@@ -212,7 +213,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
               />
 
             </div>
-            
+
             <div className="field-group">
               <label htmlFor="address">Adresse de l'établissement</label>
               <input

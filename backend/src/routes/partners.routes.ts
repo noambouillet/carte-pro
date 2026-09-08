@@ -18,19 +18,25 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
         const [partner] = await database
           .insert(partners)
           .values({
-            name: body.name,
+            firstName: body.firstName,
+            lastName: body.lastName,
             siren: body.siren,
-            objetSocial: body.objetSocial,
-            address: body.address,
+            objetSocial: body.socialPurpose,
+            name: body.establishmentName,
+            address: body.establishmentAddress,
             email: body.email,
+            phone: body.establishmentPhone,
             passwordHash,
           })
           .returning({
             id: partners.id,
-            name: partners.name,
+            firstName: partners.firstName,
+            lastName: partners.lastName,
             siren: partners.siren,
-            objetSocial: partners.objetSocial,
-            address: partners.address,
+            socialPurpose: partners.objetSocial,
+            establishmentName: partners.name,
+            establishmentAddress: partners.address,
+            establishmentPhone: partners.phone,
             email: partners.email,
             status: partners.status,
             createdAt: partners.createdAt,
@@ -55,21 +61,31 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
     },
     {
       body: t.Object({
-        name: t.String({ minLength: 1 }),
-        siren: t.String({ minLength: 9, maxLength: 9, pattern: "^\\d{9}$" }),
-        objetSocial: t.String({ minLength: 1 }),
-        address: t.String({ minLength: 1 }),
+        firstName: t.String({ minLength: 1 }),
+        lastName: t.String({ minLength: 1 }),
         email: t.String({ minLength: 1 }),
         password: t.String({ minLength: 8 }),
+        siren: t.String({
+          minLength: 9,
+          maxLength: 9,
+          pattern: "^\\d{9}$",
+        }),
+        socialPurpose: t.String({ minLength: 1 }),
+        establishmentName: t.String({ minLength: 1 }),
+        establishmentAddress: t.String({ minLength: 1 }),
+        establishmentPhone: t.String({ minLength: 1 }),
       }),
       response: {
         201: t.Object({
           partner: t.Object({
             id: t.String(),
-            name: t.String(),
+            firstName: t.String(),
+            lastName: t.String(),
             siren: t.String(),
-            objetSocial: t.String(),
-            address: t.String(),
+            socialPurpose: t.String(),
+            establishmentName: t.String(),
+            establishmentAddress: t.String(),
+            establishmentPhone: t.String(),
             email: t.String(),
             status: partnerStatusEnum,
             createdAt: t.String(),
@@ -102,7 +118,12 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
       response: {
         200: t.Object({
           partners: t.Array(
-            t.Object({ id: t.String(), name: t.String(), address: t.String(), status: partnerStatusEnum })
+            t.Object({
+              id: t.String(),
+              name: t.Union([t.String(), t.Null()]),
+              address: t.Union([t.String(), t.Null()]),
+              status: partnerStatusEnum
+            })
           ),
         }),
       },

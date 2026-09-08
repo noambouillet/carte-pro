@@ -7,7 +7,8 @@ export interface TransactionHistoryRow {
   id: number;
   occurredAt: string | Date;
   employeeId: number;
-  partnerId: number;
+  partnerId: number | null;
+  qrCodeId: number | null;
   amountCents: number;
   status: string;
 }
@@ -19,17 +20,15 @@ export async function fetchTransactionHistory(db: Db): Promise<TransactionHistor
       occurredAt: transactionHistory.occurredAt,
       employeeId: transactionHistory.employeeId,
       partnerId: transactionHistory.partnerId,
+      qrCodeId: transactionHistory.qrCodeId,
       amountCents: transactionHistory.amountCents,
       status: transactionHistory.status,
     })
     .from(transactionHistory)
-    .orderBy(
-      asc(transactionHistory.occurredAt),
-      asc(transactionHistory.id),
-    );
+    .orderBy(asc(transactionHistory.occurredAt), asc(transactionHistory.id));
 }
 
-const CSV_HEADER = "id;date_iso8601;employee_id;partner_id;amount_cents;status";
+const CSV_HEADER = "id;date_iso8601;employee_id;partner_id;qr_code_id;amount_cents;status";
 
 export function toCsv(rows: TransactionHistoryRow[]): string {
   const lines = [CSV_HEADER];
@@ -37,17 +36,21 @@ export function toCsv(rows: TransactionHistoryRow[]): string {
   for (const row of rows) {
     const occurredAt = row.occurredAt instanceof Date ? row.occurredAt : new Date(row.occurredAt);
 
-    lines.push([row.id, occurredAt.toISOString(), row.employeeId, row.partnerId, row.amountCents, row.status].join(";"));
+    lines.push([
+      row.id,
+      occurredAt.toISOString(),
+      row.employeeId,
+      row.partnerId ?? "",
+      row.qrCodeId ?? "",
+      row.amountCents,
+      row.status,
+    ].join(";"));
   }
 
-  return (
-    lines.join("\n") + "\n"
-  );
+  return lines.join("\n") + "\n";
 }
 
 export async function fetchTransactionHistoryCsv(db: Db): Promise<string> {
-  const rows =
-    await fetchTransactionHistory(db);
-
+  const rows = await fetchTransactionHistory(db);
   return toCsv(rows);
 }

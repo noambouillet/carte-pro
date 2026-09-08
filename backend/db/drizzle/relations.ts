@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { partners, partnerValidationDecisions, adminAgents, employees, qrCodes, creditGrants, transactions, transactionAttempts, transactionReversals } from "./schema";
+import { partners, partnerValidationDecisions, adminAgents, employees, qrCodes, creditGrants, transactions, transactionAttempts } from "./schema";
 
 export const partnerValidationDecisionsRelations = relations(partnerValidationDecisions, ({one}) => ({
 	partner: one(partners, {
@@ -20,7 +20,6 @@ export const partnersRelations = relations(partners, ({many}) => ({
 
 export const adminAgentsRelations = relations(adminAgents, ({many}) => ({
 	partnerValidationDecisions: many(partnerValidationDecisions),
-	transactionReversals: many(transactionReversals),
 }));
 
 export const qrCodesRelations = relations(qrCodes, ({one, many}) => ({
@@ -46,7 +45,7 @@ export const creditGrantsRelations = relations(creditGrants, ({one}) => ({
 	}),
 }));
 
-export const transactionsRelations = relations(transactions, ({one, many}) => ({
+export const transactionsRelations = relations(transactions, ({one}) => ({
 	employee: one(employees, {
 		fields: [transactions.employeeId],
 		references: [employees.id]
@@ -59,7 +58,6 @@ export const transactionsRelations = relations(transactions, ({one, many}) => ({
 		fields: [transactions.qrCodeId],
 		references: [qrCodes.id]
 	}),
-	transactionReversals: many(transactionReversals),
 }));
 
 export const transactionAttemptsRelations = relations(transactionAttempts, ({one}) => ({
@@ -74,16 +72,5 @@ export const transactionAttemptsRelations = relations(transactionAttempts, ({one
 	qrCode: one(qrCodes, {
 		fields: [transactionAttempts.qrCodeId],
 		references: [qrCodes.id]
-	}),
-}));
-
-export const transactionReversalsRelations = relations(transactionReversals, ({one}) => ({
-	transaction: one(transactions, {
-		fields: [transactionReversals.transactionId],
-		references: [transactions.id]
-	}),
-	adminAgent: one(adminAgents, {
-		fields: [transactionReversals.agentId],
-		references: [adminAgents.id]
 	}),
 }));

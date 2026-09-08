@@ -17,7 +17,9 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
     setError('')
 
     try {
-      const response = await login({ email, password })
+      const loginPayload = { email, password }
+      const response = await login(loginPayload)
+      console.log('Login successful:', response)
       if (response.role === 'employee') {
         onLoginSuccess('employee')
       } else if (response.role === 'partner') {
@@ -36,7 +38,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>
       <p className="intro">
-        Accédez à votre espace d&apos;administration de la transition numérique
+        Accédez à votre espace d'administration de la transition numérique
         et gérez vos projets.
       </p>
 
