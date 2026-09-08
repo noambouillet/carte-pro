@@ -5,8 +5,8 @@ export function SimulationNotice() {
   return (
     <p className="simulation-notice" role="note">
       <strong>Simulation</strong> - aucune valeur monétaire réelle ne circule.
-      Les montants suivis d&apos;un astérisque sont fictifs et aucun paiement
-      n&apos;est exécuté.
+      Les montants suivis d'un astérisque sont fictifs et aucun paiement
+      n'est exécuté.
     </p>
   )
 }

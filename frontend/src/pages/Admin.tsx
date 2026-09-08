@@ -81,42 +81,36 @@ const referralRequests: ReferralRequest[] = [
 const accounts: Account[] = [
   {
     name: 'Le Comptoir du Midi',
-    code: 'PAR-2210-4417',
     type: 'partner',
     attachment: 'Restauration',
     status: 'active',
   },
   {
     name: 'Sport Loisirs Aubagne',
-    code: 'PAR-3390-1188',
     type: 'partner',
     attachment: 'Sport',
     status: 'suspended',
   },
   {
     name: 'Pharmacie du Parc',
-    code: 'PAR-4471-9903',
     type: 'partner',
     attachment: 'Santé',
     status: 'active',
   },
   {
     name: 'Épicerie Sainte-Claire',
-    code: 'PAR-5512-3067',
     type: 'partner',
     attachment: 'Alimentation',
     status: 'active',
   },
   {
     name: 'Librairie Vasseur',
-    code: 'PAR-6640-2214',
     type: 'partner',
     attachment: 'Culture',
     status: 'active',
   },
   {
     name: 'Transports Régionaux Unifiés',
-    code: 'PAR-7789-4456',
     type: 'partner',
     attachment: 'Mobilité',
     status: 'active',
@@ -139,8 +133,6 @@ type SubsidyEmployee = {
   identifier: string
   balance: number
 }
-
-
 
 const subsidyEmployees: SubsidyEmployee[] = [
   { name: 'Camille Ferrand', identifier: 'VAL-004471', balance: 168.4 },
@@ -176,7 +168,6 @@ function Admin() {
     setRequests((current) => current.filter((request) => request.siren !== siren))
   }
 
-
   const [pendingDecision, setPendingDecision] = useState<
     { siren: string; kind: 'approve' | 'reject' } | null
   >(null)
@@ -199,11 +190,10 @@ function Admin() {
     setDecisionReason('')
   }
 
-
-  const setAccountStatus = (code: string, status: Account['status']) => {
+  const setAccountStatus = (name: string, status: Account['status']) => {
     setAccountList((current) =>
       current.map((account) =>
-        account.code === code ? { ...account, status } : account,
+        account.name === name ? { ...account, status } : account,
       ),
     )
   }
@@ -216,7 +206,6 @@ function Admin() {
       const matchesSearch =
         search === '' ||
         account.name.toLowerCase().includes(search) ||
-        account.code.toLowerCase().includes(search) ||
         account.attachment.toLowerCase().includes(search)
 
       return matchesType && matchesSearch
@@ -522,10 +511,9 @@ function Admin() {
             </thead>
             <tbody>
               {visibleAccounts.map((account) => (
-                <tr key={account.code}>
+                <tr key={account.name}>
                   <td>
                     <span className="history-partner">{account.name}</span>
-                    <span className="history-city">{account.code}</span>
                   </td>
                   <td>{accountTypeLabels[account.type]}</td>
                   <td>{account.attachment}</td>
@@ -548,7 +536,7 @@ function Admin() {
                         className="admin-action"
                         type="button"
                         disabled={account.status === 'active'}
-                        onClick={() => setAccountStatus(account.code, 'active')}
+                        onClick={() => setAccountStatus(account.name, 'active')}
                       >
                         Activer
                       </button>
@@ -557,7 +545,7 @@ function Admin() {
                         type="button"
                         disabled={account.status === 'suspended'}
                         onClick={() =>
-                          setAccountStatus(account.code, 'suspended')
+                          setAccountStatus(account.name, 'suspended')
                         }
                       >
                         Suspendre
@@ -566,7 +554,7 @@ function Admin() {
                         className="admin-reject"
                         type="button"
                         disabled={account.status === 'closed'}
-                        onClick={() => setAccountStatus(account.code, 'closed')}
+                        onClick={() => setAccountStatus(account.name, 'closed')}
                       >
                         Clôturer
                       </button>
@@ -624,8 +612,6 @@ function Admin() {
                 value={amountPerEmployee}
                 placeholder="Exemple : 120"
                 onChange={(event) => {
-                  // Un input number laisse encore passer "e", "+" ou "-" :
-                  // on filtre nous-memes pour ne garder que des chiffres.
                   const digitsOnly = event.target.value.replace(/\D/g, '')
                   setAmountPerEmployee(digitsOnly === '' ? '' : Number(digitsOnly))
                 }}

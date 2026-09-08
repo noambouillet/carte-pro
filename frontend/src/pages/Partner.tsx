@@ -229,13 +229,13 @@ function Partner() {
             <aside className="pay-card" aria-labelledby="pay-title">
               <h2 id="pay-title">Recevoir un paiement</h2>
               <p className="pay-intro">
-                Deux méthodes d&apos;encaissement au choix.
+                Deux méthodes d'encaissement au choix.
               </p>
 
               <div className="pay-method">
                 <h3>1. Scanner le QR code du salarié</h3>
                 <p>
-                  La caméra s&apos;ouvre, le montant est confirmé à l&apos;écran
+                  La caméra s'ouvre, le montant est confirmé à l'écran
                   avant validation.
                 </p>
                 <button
@@ -287,7 +287,7 @@ function Partner() {
                 </div>
 
                 <button className="pay-secondary" type="submit">
-                  Valider l&apos;encaissement
+                  Valider l'encaissement
                 </button>
               </form>
 
