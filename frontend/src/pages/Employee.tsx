@@ -179,7 +179,7 @@ function Employee() {
         <div className="dash-grid">
           <section className="balance-card" aria-labelledby="balance-title">
             <h2 className="balance-label" id="balance-title">
-              Solde Ticket tout disponible
+              Solde Carte Pro disponible
             </h2>
             <p className="balance-value">
               <Amount>{balanceCents !== null ? `${euro(balanceCents)} €` : '…'}</Amount>

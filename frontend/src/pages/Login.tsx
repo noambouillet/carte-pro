@@ -4,9 +4,10 @@ import { login } from '../api/Auth'
 
 type LoginProps = {
   onCreateAccount: () => void
+  onLoginSuccess: (role: string) => void
 }
 
-function Login({ onCreateAccount }: LoginProps) {
+function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -16,6 +17,15 @@ function Login({ onCreateAccount }: LoginProps) {
       const loginPayload = { email, password }
       const response = await login(loginPayload)
       console.log('Login successful:', response)
+      if (response.role === 'employee') {
+        onLoginSuccess('employee')
+      } else if (response.role === 'partner') {
+        onLoginSuccess('partner')
+      } else if (response.role === 'admin') {
+        onLoginSuccess('admin')
+      } else {
+        console.error('Unknown role:', response.role)
+      }
     } catch (error) {
       console.error('Login failed:', error)
     }
@@ -25,7 +35,7 @@ function Login({ onCreateAccount }: LoginProps) {
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>
       <p className="intro">
-        Accédez à votre espace d&apos;administration de la transition numérique
+        Accédez à votre espace d'administration de la transition numérique
         et gérez vos projets.
       </p>
 
@@ -77,9 +87,7 @@ function Login({ onCreateAccount }: LoginProps) {
       </form>
 
       <p className="legal">
-        En continuant, vous acceptez les conditions générales d&apos;utilisation
-        du portail ministériel. Ce site est protégé par les systèmes de
-        sécurité de l&apos;État.
+        En continuant, vous acceptez les conditions générales d&apos;utilisation.
       </p>
     </section>
   )

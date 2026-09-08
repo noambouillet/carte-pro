@@ -9,23 +9,11 @@ function Footer() {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <div className="footer-brand">
-          <div className="footer-identity">
-            <span className="brand-flag" aria-hidden="true" />
-            <span className="brand-ministry">
-              Ministère
-              <br />
-              du job
-              <br />
-              et bonheur
-            </span>
-          </div>
-
-          <p className="footer-note">
-            Ticket Tout est un dispositif d&apos;avantages salariés dématérialisés
-            opéré par le Ministère du Job et Bonheur.
+          <p className="footer-disclaimer">
+            Démonstrateur technique, ne constitue pas un service public en
+            exploitation.
           </p>
         </div>
-
         <nav className="footer-nav" aria-label="Liens de bas de page">
           <ul>
             {footerLinks.map((label) => (

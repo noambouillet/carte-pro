@@ -1,15 +1,20 @@
 import './LandingPage.css'
 import { partners } from './partners'
+import { getMe } from '../api/Auth'
 
 type HomeProps = {
   onLogin: () => void
-  onPartner: () => void
+  onBecomePartner: () => void
+  onEmployee?: () => void
+  onAdmin?: () => void
+  onPartner?: () => void
+  isLoggedIn: boolean
 }
 
 const steps = [
   {
     title: "L'employeur crédite le compte",
-    text: "L'abondement mensuel est versé sur le compte Ticket Tout de chaque salarié, à date fixe.",
+    text: "L'abondement mensuel est versé sur le compte Carte Pro de chaque salarié, à date fixe.",
   },
   {
     title: 'Le salarié paie par QR code',
@@ -22,7 +27,32 @@ const steps = [
 ]
 
 
-function Home({ onLogin, onPartner }: HomeProps) {
+
+function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLoggedIn }: HomeProps) {
+  async function handleAccessPersonalSpace() {
+    try {
+      const response = await getMe()
+
+      if (response && response.role) {
+        if (response.role === 'employee' && onEmployee) {
+          onEmployee()
+        } else if (response.role === 'partner' && onPartner) {
+          onPartner()
+        } else if (response.role === 'admin' && onAdmin) {
+          onAdmin()
+        } else {
+          console.error('Unknown role:', response.role)
+          onLogin()
+        }
+      } else {
+        onLogin()
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error)
+      onLogin()
+    }
+  }
+
   return (
     <>
       <div className="home">
@@ -35,23 +65,24 @@ function Home({ onLogin, onPartner }: HomeProps) {
           </h1>
 
           <p className="home-lead">
-            Ticket Tout remplace les titres papier : votre employeur crédite votre
-            compte, vous payez par QR code chez un partenaire référencé par le
-            ministère, le partenaire est réglé sous 48 heures.
+            Carte Pro remplace les titres papier : votre employeur crédite votre
+            compte, vous payez par QR code chez un partenaire référencé, le partenaire est réglé sous 48 heures.
           </p>
 
-          <div className="home-actions">
+          {!isLoggedIn && (
+            <div className="home-actions">
             <button className="action-primary" type="button" onClick={onLogin}>
               Se connecter
             </button>
             <button
               className="action-secondary"
               type="button"
-              onClick={onPartner}
+              onClick={onBecomePartner}
             >
               Devenir partenaire
             </button>
           </div>
+          )}
 
           <dl className="home-stats">
             <div className="stat">
@@ -71,7 +102,7 @@ function Home({ onLogin, onPartner }: HomeProps) {
 
         <aside className="home-aside" aria-labelledby="audience-title">
           <h2 className="aside-title" id="audience-title">
-            À qui s&apos;adresse Ticket Tout
+            À qui s&apos;adresse Carte Pro
           </h2>
 
           <div className="aside-block">
@@ -80,7 +111,10 @@ function Home({ onLogin, onPartner }: HomeProps) {
               Consultez votre solde, générez votre QR code de paiement et
               retrouvez les partenaires autour de vous.
             </p>
-            <button className="aside-link" type="button" onClick={onLogin}>
+            <button className="aside-link"
+              type="button"
+              onClick={handleAccessPersonalSpace}
+            >
               Accéder à mon espace
             </button>
           </div>
@@ -119,9 +153,6 @@ function Home({ onLogin, onPartner }: HomeProps) {
                 établissements.
               </p>
             </div>
-            <button className="band-link" type="button" onClick={onPartner}>
-              Consulter l&apos;annuaire complet
-            </button>
           </div>
 
           <ul className="partner-grid">
