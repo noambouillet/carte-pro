@@ -1,6 +1,6 @@
 import api from "./AxiosConfig";
 
-export type PartnerStatus = "pending" | "validated" | "rejected";
+export type PartnerStatus = "pending" | "validated" | "rejected" | "archived" ;
 
 export interface PartnerDirectoryEntry {
   id: string;
@@ -16,6 +16,28 @@ export interface PartnerTransaction {
   amountCents: number;
   idempotencyKey: string;
   createdAt: string;
+}
+
+export async function registerPartner(firstName: string, lastName: string, email: string, password: string, siren: string,
+  socialPurpose: string, establishmentName: string, establishmentAddress: string, establishmentPhone: string) {
+  try {
+    const response = await api.post("/partners/register", {
+      firstName,
+      lastName,
+      email,
+      password,
+      siren,
+      socialPurpose,
+      establishmentName,
+      establishmentAddress,
+      establishmentPhone,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Erreur lors de l'inscription :", error);
+    throw error;
+  }
 }
 
 export async function searchPartners(q?: string): Promise<{ partners: PartnerDirectoryEntry[] }> {

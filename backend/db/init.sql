@@ -17,11 +17,14 @@ CREATE TABLE employees (
 
 CREATE TABLE partners (
     id            BIGSERIAL PRIMARY KEY,
-    name          TEXT,
+    first_name    TEXT,
+    last_name     TEXT,
     siren         CHAR(9) CHECK (siren ~ '^\d{9}$'),
     objet_social  TEXT,
-    address        TEXT,
+    address       TEXT,
+    name          TEXT,
     email         CITEXT UNIQUE,
+    phone         TEXT,
     password_hash TEXT,
     status        partner_status NOT NULL DEFAULT 'pending',
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
