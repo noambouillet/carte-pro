@@ -52,28 +52,28 @@ const referralRequests: ReferralRequest[] = [
     establishment: 'Fleuriste Camélia',
     city: 'Angers',
     category: 'Commerce',
-    siret: '904 118 552 00014',
+    siren: '904 118 552',
     submittedAt: '29/08/2026',
   },
   {
     establishment: 'Cinéma Le Rialto',
     city: 'Metz',
     category: 'Culture',
-    siret: '512 663 041 00027',
+    siren: '512 663 041',
     submittedAt: '28/08/2026',
   },
   {
     establishment: 'Traiteur Les Deux Tables',
     city: 'Dijon',
     category: 'Restauration',
-    siret: '833 907 216 00019',
+    siren: '833 907 216 ',
     submittedAt: '28/08/2026',
   },
   {
     establishment: 'Studio Pilates Aria',
     city: 'Reims',
     category: 'Sport',
-    siret: '789 452 330 00032',
+    siren: '789 452 330',
     submittedAt: '27/08/2026',
   },
 ]
@@ -136,25 +136,20 @@ const accountStatusLabels: Record<Account['status'], string> = {
 
 type SubsidyEmployee = {
   name: string
-  matricule: string
+  identifier: string
   balance: number
 }
 
-const REGULATORY_CAP = 250
 
-const employer = { name: 'Groupe Vallonis', employeeCount: 1480 }
 
 const subsidyEmployees: SubsidyEmployee[] = [
-  { name: 'Camille Ferrand', matricule: 'VAL-004471', balance: 168.4 },
-  { name: 'Yanis Prunier', matricule: 'VAL-004472', balance: 94.1 },
-  { name: 'Hélène Marchetti', matricule: 'VAL-004473', balance: 212.75 },
-  { name: 'Abdel Rahmani', matricule: 'VAL-004474', balance: 36 },
-  { name: 'Léa Vasseur', matricule: 'VAL-004475', balance: 128.6 },
-  { name: 'Thomas Guérin', matricule: 'VAL-004476', balance: 77.25 },
+  { name: 'Camille Ferrand', identifier: 'VAL-004471', balance: 168.4 },
+  { name: 'Yanis Prunier', identifier: 'VAL-004472', balance: 94.1 },
+  { name: 'Hélène Marchetti', identifier: 'VAL-004473', balance: 212.75 },
+  { name: 'Abdel Rahmani', identifier: 'VAL-004474', balance: 36 },
+  { name: 'Léa Vasseur', identifier: 'VAL-004475', balance: 128.6 },
+  { name: 'Thomas Guérin', identifier: 'VAL-004476', balance: 77.25 },
 ]
-
-const ROSTER_SIZE = 42
-const HIDDEN_ROSTER_SIZE = ROSTER_SIZE - subsidyEmployees.length
 
 const euro = (amount: number) =>
   `${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`
@@ -177,20 +172,18 @@ function Admin() {
 
   const maxRegion = Math.max(...regions.map((region) => region.count))
 
-  const decideRequest = (siret: string) => {
-    setRequests((current) => current.filter((request) => request.siret !== siret))
+  const decideRequest = (siren: string) => {
+    setRequests((current) => current.filter((request) => request.siren !== siren))
   }
 
-  // Valider/Refuser n'agit pas tout de suite : ça ouvre un champ de motif
-  // sous la ligne concernee, et c'est la confirmation qui applique la
-  // decision.
+
   const [pendingDecision, setPendingDecision] = useState<
-    { siret: string; kind: 'approve' | 'reject' } | null
+    { siren: string; kind: 'approve' | 'reject' } | null
   >(null)
   const [decisionReason, setDecisionReason] = useState('')
 
-  const openDecision = (siret: string, kind: 'approve' | 'reject') => {
-    setPendingDecision({ siret, kind })
+  const openDecision = (siren: string, kind: 'approve' | 'reject') => {
+    setPendingDecision({ siren, kind })
     setDecisionReason('')
   }
 
@@ -201,7 +194,7 @@ function Admin() {
 
   const confirmDecision = () => {
     if (!pendingDecision) return
-    decideRequest(pendingDecision.siret)
+    decideRequest(pendingDecision.siren)
     setPendingDecision(null)
     setDecisionReason('')
   }
@@ -230,25 +223,35 @@ function Admin() {
     })
   }, [accountList, accountFilter, accountQuery])
 
-  const [amountPerEmployee, setAmountPerEmployee] = useState(120)
+  const [amountPerEmployee, setAmountPerEmployee] = useState<number | ''>('')
   const [valueDate, setValueDate] = useState('2026-09-01')
-  const [selectedMatricules, setSelectedMatricules] = useState(
-    () => new Set(subsidyEmployees.map((subsidyEmployee) => subsidyEmployee.matricule)),
+  const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
+    () => new Set(),
   )
-  const [hiddenSelectedCount, setHiddenSelectedCount] = useState(HIDDEN_ROSTER_SIZE)
   const [subsidyFeedback, setSubsidyFeedback] = useState('')
+  const [employeeQuery, setEmployeeQuery] = useState('')
 
-  const selectedCount = selectedMatricules.size + hiddenSelectedCount
-  const subsidyTotal = amountPerEmployee * selectedCount
-  const overCap = amountPerEmployee > REGULATORY_CAP
+  const selectedCount = selectedIdentifiers.size
+  const numericAmount = amountPerEmployee === '' ? 0 : amountPerEmployee
 
-  const toggleEmployee = (matricule: string) => {
-    setSelectedMatricules((current) => {
+  const visibleSubsidyEmployees = useMemo(() => {
+    const search = employeeQuery.trim().toLowerCase()
+
+    return subsidyEmployees.filter(
+      (subsidyEmployee) =>
+        search === '' ||
+        subsidyEmployee.name.toLowerCase().includes(search) ||
+        subsidyEmployee.identifier.toLowerCase().includes(search),
+    )
+  }, [employeeQuery])
+
+  const toggleEmployee = (identifier: string) => {
+    setSelectedIdentifiers((current) => {
       const next = new Set(current)
-      if (next.has(matricule)) {
-        next.delete(matricule)
+      if (next.has(identifier)) {
+        next.delete(identifier)
       } else {
-        next.add(matricule)
+        next.add(identifier)
       }
       return next
     })
@@ -256,13 +259,11 @@ function Admin() {
 
   const toggleSelectAll = () => {
     if (selectedCount === 0) {
-      setSelectedMatricules(
-        new Set(subsidyEmployees.map((subsidyEmployee) => subsidyEmployee.matricule)),
+      setSelectedIdentifiers(
+        new Set(subsidyEmployees.map((subsidyEmployee) => subsidyEmployee.identifier)),
       )
-      setHiddenSelectedCount(HIDDEN_ROSTER_SIZE)
     } else {
-      setSelectedMatricules(new Set())
-      setHiddenSelectedCount(0)
+      setSelectedIdentifiers(new Set())
     }
   }
 
@@ -345,14 +346,14 @@ function Admin() {
               <tr>
                 <th scope="col">Établissement</th>
                 <th scope="col">Catégorie</th>
-                <th scope="col">SIRET</th>
+                <th scope="col">SIREN</th>
                 <th scope="col">Déposée le</th>
                 <th scope="col">Décision</th>
               </tr>
             </thead>
             <tbody>
               {requests.map((request) => (
-                <Fragment key={request.siret}>
+                <Fragment key={request.siren}>
                   <tr>
                     <td>
                       <span className="history-partner">
@@ -361,21 +362,21 @@ function Admin() {
                       <span className="history-city">{request.city}</span>
                     </td>
                     <td>{request.category}</td>
-                    <td className="admin-requests-siret">{request.siret}</td>
+                    <td className="admin-requests-siren">{request.siren}</td>
                     <td>{request.submittedAt}</td>
                     <td>
                       <div className="admin-requests-actions">
                         <button
                           className="admin-approve"
                           type="button"
-                          onClick={() => openDecision(request.siret, 'approve')}
+                          onClick={() => openDecision(request.siren, 'approve')}
                         >
                           Valider
                         </button>
                         <button
                           className="admin-reject"
                           type="button"
-                          onClick={() => openDecision(request.siret, 'reject')}
+                          onClick={() => openDecision(request.siren, 'reject')}
                         >
                           Refuser
                         </button>
@@ -383,18 +384,18 @@ function Admin() {
                     </td>
                   </tr>
 
-                  {pendingDecision?.siret === request.siret && (
+                  {pendingDecision?.siren === request.siren && (
                     <tr className="admin-decision-row">
                       <td colSpan={5}>
                         <div className="admin-decision-form">
                           <div className="admin-decision-field">
-                            <label htmlFor={`decision-reason-${request.siret}`}>
+                            <label htmlFor={`decision-reason-${request.siren}`}>
                               {pendingDecision.kind === 'approve'
                                 ? 'Motif de validation'
                                 : 'Motif de refus'}
                             </label>
                             <input
-                              id={`decision-reason-${request.siret}`}
+                              id={`decision-reason-${request.siren}`}
                               type="text"
                               value={decisionReason}
                               onChange={(event) =>
@@ -402,7 +403,7 @@ function Admin() {
                               }
                               placeholder={
                                 pendingDecision.kind === 'approve'
-                                  ? 'Ex. : dossier conforme, SIRET vérifié.'
+                                  ? 'Ex. : dossier conforme, SIREN vérifié.'
                                   : 'Ex. : pièces manquantes, activité hors périmètre.'
                               }
                               autoFocus
@@ -503,8 +504,8 @@ function Admin() {
             type="search"
             value={accountQuery}
             onChange={(event) => setAccountQuery(event.target.value)}
-            placeholder="Rechercher un compte, un SIRET, un employeur"
-            aria-label="Rechercher un compte, un SIRET, un employeur"
+            placeholder="Rechercher un compte, un SIREN, un employeur"
+            aria-label="Rechercher un compte, un SIREN, un employeur"
           />
         </div>
 
@@ -588,18 +589,24 @@ function Admin() {
     body = (
       <div className="dash-inner dash-body">
         <h1 className="dash-title">Gestion des abondements employeurs</h1>
+        <p className="dash-subtitle">
+          Sélectionnez les salariés à créditer et le montant à verser. Le
+          crédit est effectif à la date de valeur choisie et notifié aux
+          salariés concernés.
+        </p>
         <SimulationNotice />
 
         <div className="admin-subsidy-grid">
           <div className="pay-card admin-subsidy-form">
             <div className="pay-field">
-              <label htmlFor="subsidy-employer">Employeur</label>
-              <select id="subsidy-employer" defaultValue={employer.name}>
-                <option value={employer.name}>
-                  {employer.name} — {employer.employeeCount.toLocaleString('fr-FR')}{' '}
-                  salariés
-                </option>
-              </select>
+              <label htmlFor="subsidy-search">Salariés</label>
+              <input
+                id="subsidy-search"
+                type="search"
+                value={employeeQuery}
+                onChange={(event) => setEmployeeQuery(event.target.value)}
+                placeholder="Rechercher un salarié ou un identifiant"
+              />
             </div>
 
             <div className="pay-field">
@@ -611,25 +618,18 @@ function Admin() {
               </label>
               <input
                 id="subsidy-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                aria-invalid={overCap || undefined}
-                aria-describedby="subsidy-amount-hint"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
                 value={amountPerEmployee}
-                onChange={(event) =>
-                  setAmountPerEmployee(Number(event.target.value))
-                }
+                placeholder="Exemple : 120"
+                onChange={(event) => {
+                  // Un input number laisse encore passer "e", "+" ou "-" :
+                  // on filtre nous-memes pour ne garder que des chiffres.
+                  const digitsOnly = event.target.value.replace(/\D/g, '')
+                  setAmountPerEmployee(digitsOnly === '' ? '' : Number(digitsOnly))
+                }}
               />
-              <p
-                className={overCap ? 'field-error' : 'field-hint'}
-                id="subsidy-amount-hint"
-              >
-                {overCap
-                  ? `Le montant dépasse le plafond réglementaire de ${euro(REGULATORY_CAP)} par mois.`
-                  : `Plafond réglementaire : ${euro(REGULATORY_CAP)} par mois.`}
-              </p>
             </div>
 
             <div className="pay-field">
@@ -642,27 +642,11 @@ function Admin() {
               />
             </div>
 
-            <div className="pay-method admin-subsidy-summary">
-              <p className="admin-subsidy-summary-label">
-                Total de l&apos;abondement
-              </p>
-              <p className="admin-subsidy-total">
-                <Amount>{euro(subsidyTotal)}</Amount>
-              </p>
-              <p className="admin-subsidy-summary-hint">
-                <Amount>
-                  {selectedCount} salarié{selectedCount > 1 ? 's' : ''}{' '}
-                  sélectionné{selectedCount > 1 ? 's' : ''} ×{' '}
-                  {euro(amountPerEmployee)}
-                </Amount>
-              </p>
-            </div>
-
             <div className="admin-subsidy-actions">
               <button
                 className="pay-primary"
                 type="button"
-                disabled={overCap || selectedCount === 0}
+                disabled={selectedCount === 0 || numericAmount === 0}
                 onClick={() =>
                   setSubsidyFeedback('Abondement enregistré (démonstration).')
                 }
@@ -681,9 +665,7 @@ function Admin() {
             aria-labelledby="subsidy-employees-title"
           >
             <div className="admin-subsidy-employees-head">
-              <h2 id="subsidy-employees-title">
-                Salariés concernés — {employer.name}
-              </h2>
+              <h2 id="subsidy-employees-title">Salariés</h2>
               <button className="band-link" type="button">
                 Importer un fichier CSV
               </button>
@@ -695,26 +677,26 @@ function Admin() {
                   <th scope="col" aria-label="Sélection">
                   </th>
                   <th scope="col">Salarié</th>
-                  <th scope="col">Matricule</th>
+                  <th scope="col">Identifiant</th>
                   <th scope="col" className="cell-amount">
                     Solde actuel
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {subsidyEmployees.map((subsidyEmployee) => (
-                  <tr key={subsidyEmployee.matricule}>
+                {visibleSubsidyEmployees.map((subsidyEmployee) => (
+                  <tr key={subsidyEmployee.identifier}>
                     <td>
                       <input
                         type="checkbox"
-                        checked={selectedMatricules.has(subsidyEmployee.matricule)}
-                        onChange={() => toggleEmployee(subsidyEmployee.matricule)}
+                        checked={selectedIdentifiers.has(subsidyEmployee.identifier)}
+                        onChange={() => toggleEmployee(subsidyEmployee.identifier)}
                         aria-label={`Inclure ${subsidyEmployee.name}`}
                       />
                     </td>
                     <td className="history-partner">{subsidyEmployee.name}</td>
-                    <td className="admin-subsidy-matricule">
-                      {subsidyEmployee.matricule}
+                    <td className="admin-subsidy-identifier">
+                      {subsidyEmployee.identifier}
                     </td>
                     <td className="cell-amount">
                       <Amount showLabel={false}>{euro(subsidyEmployee.balance)}</Amount>
@@ -724,6 +706,12 @@ function Admin() {
               </tbody>
             </table>
 
+            {visibleSubsidyEmployees.length === 0 && (
+              <p className="admin-requests-empty">
+                Aucun salarié ne correspond à cette recherche.
+              </p>
+            )}
+
             <p className="chart-note">
               <span className="sim-mark">*</span> Soldes fictifs, aucune
               valeur réelle.
@@ -731,8 +719,10 @@ function Admin() {
 
             <div className="admin-subsidy-employees-footer">
               <span>
-                {subsidyEmployees.length} lignes affichées sur {selectedCount}{' '}
-                sélectionnées
+                {visibleSubsidyEmployees.length} ligne
+                {visibleSubsidyEmployees.length > 1 ? 's' : ''} affichée
+                {visibleSubsidyEmployees.length > 1 ? 's' : ''} sur{' '}
+                {selectedCount} sélectionnée{selectedCount > 1 ? 's' : ''}
               </span>
               <button className="band-link" type="button" onClick={toggleSelectAll}>
                 {selectedCount === 0 ? 'Tout sélectionner' : 'Tout désélectionner'}

@@ -2,6 +2,6 @@ export type ReferralRequest = {
   establishment: string
   city: string
   category: string
-  siret: string
+  siren: string
   submittedAt: string
 }
