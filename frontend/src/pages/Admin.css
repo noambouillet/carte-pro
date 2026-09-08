@@ -95,7 +95,7 @@
   white-space: nowrap;
 }
 
-.admin-requests-siret {
+.admin-requests-siren {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   white-space: pre;
 }
@@ -326,7 +326,7 @@
   text-align: center;
 }
 
-.admin-subsidy-matricule {
+.admin-subsidy-identifier {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
 
