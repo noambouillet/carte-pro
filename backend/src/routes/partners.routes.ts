@@ -102,7 +102,12 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
       response: {
         200: t.Object({
           partners: t.Array(
-            t.Object({ id: t.String(), name: t.String(), address: t.String(), status: partnerStatusEnum })
+            t.Object({
+              id: t.String(),
+              name: t.Union([t.String(), t.Null()]),
+              address: t.Union([t.String(), t.Null()]),
+              status: partnerStatusEnum
+            })
           ),
         }),
       },

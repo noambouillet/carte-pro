@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS citext;
 
 CREATE TYPE employee_status AS ENUM ('active', 'inactive');
-CREATE TYPE partner_status AS ENUM ('pending', 'validated', 'rejected');
+CREATE TYPE partner_status AS ENUM ('pending', 'validated', 'rejected', 'archived');
 CREATE TYPE partner_decision AS ENUM ('approved', 'rejected');
 CREATE TYPE transaction_attempt_status AS ENUM ('refused_insufficient_balance');
 
@@ -17,12 +17,12 @@ CREATE TABLE employees (
 
 CREATE TABLE partners (
     id            BIGSERIAL PRIMARY KEY,
-    name          TEXT NOT NULL,
-    siren         CHAR(9) NOT NULL CHECK (siren ~ '^\d{9}$'),
-    objet_social  TEXT NOT NULL,
-    address        TEXT NOT NULL,
-    email         CITEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
+    name          TEXT,
+    siren         CHAR(9) CHECK (siren ~ '^\d{9}$'),
+    objet_social  TEXT,
+    address        TEXT,
+    email         CITEXT UNIQUE,
+    password_hash TEXT,
     status        partner_status NOT NULL DEFAULT 'pending',
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );

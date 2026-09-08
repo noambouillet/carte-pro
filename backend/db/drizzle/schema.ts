@@ -32,12 +32,12 @@ export const partners = pgTable(
   "partners",
   {
     id: bigserial({ mode: "number" }).primaryKey().notNull(),
-    name: text().notNull(),
-    siren: char({ length: 9 }).notNull(),
-    objetSocial: text("objet_social").notNull(),
-    address: text().notNull(),
-    email: citext("email").notNull(),
-    passwordHash: text("password_hash").notNull(),
+    name: text(),
+    siren: char({ length: 9 }),
+    objetSocial: text("objet_social"),
+    address: text(),
+    email: citext("email"),
+    passwordHash: text("password_hash"),
     status: partnerStatus().default("pending").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
   },
@@ -219,7 +219,7 @@ export const employeeBalances = pgView(
 export const transactionHistory = pgView(
   "transaction_history",
   {
-    id: bigint({ mode: "number" }),
+    id: bigint({ mode: "number" }).notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "string" }).notNull(),
     employeeId: bigint("employee_id", { mode: "number" }).notNull(),
     partnerId: bigint("partner_id", { mode: "number" }),
