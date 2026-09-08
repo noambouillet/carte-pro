@@ -27,7 +27,7 @@ export const registerPartner = async (
     establishmentPhone: string
 ) => {
   try {
-    const response = await api.post('/partner/register', {
+    const response = await api.post('/partners/register', {
         first_name: firstName,
         last_name: lastName,
         email,
