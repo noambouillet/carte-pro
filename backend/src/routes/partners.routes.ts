@@ -133,6 +133,78 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
       },
     }
   )
+  .get("/transactions", async ({ authUser, query, set }) => {
+      const since = query.since ? new Date(query.since) : undefined
+
+      if (since && Number.isNaN(since.getTime())) {
+        set.status = 400
+        return { error: "invalid_since" }
+      }
+
+      const conditions = [
+        eq(transactions.partnerId, authUser!.id),
+      ]
+
+      if (since) {
+        conditions.push(
+          sql`${transactions.createdAt} >= ${since}`
+        )
+      }
+
+      const result = await database
+        .select({
+          id: transactions.id,
+          employeeId: transactions.employeeId,
+          partnerId: transactions.partnerId,
+          qrCodeId: transactions.qrCodeId,
+          amountCents: transactions.amountCents,
+          idempotencyKey: transactions.idempotencyKey,
+          createdAt: transactions.createdAt,
+        })
+        .from(transactions)
+        .where(and(...conditions))
+        .orderBy(desc(transactions.createdAt))
+        .limit(100)
+
+      return {
+        transactions: result.map((transaction) => ({
+          ...transaction,
+          id: String(transaction.id),
+          employeeId: String(transaction.employeeId),
+          partnerId: String(transaction.partnerId),
+          qrCodeId: transaction.qrCodeId ? String(transaction.qrCodeId) : null,
+        })),
+      }
+    },
+    {
+      beforeHandle: requireValidatedPartner,
+      query: t.Object({
+        since: t.Optional(t.String()),
+      }),
+      response: {
+        200: t.Object({
+          transactions: t.Array(
+            t.Object({
+              id: t.String(),
+              employeeId: t.String(),
+              partnerId: t.String(),
+              qrCodeId: t.Union([t.String(), t.Null()]),
+              amountCents: t.Integer(),
+              idempotencyKey: t.String(),
+              createdAt: t.String(),
+            })
+          ),
+        }),
+        400: errorSchema,
+        401: errorSchema,
+        403: errorSchema,
+      },
+      detail: {
+        summary: "Get transactions for the current partner",
+        tags: ["partners"],
+      },
+    }
+  )
   .post("/transactions", async ({ body, authUser, qrJwt, set }) => {
       const payload = await qrJwt.verify(body.qrToken).catch(() => null);
       if (!payload) {
