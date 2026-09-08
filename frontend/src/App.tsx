@@ -26,9 +26,6 @@ function App() {
     <div className="app-shell">
       <Header
         onHome={() => setScreen('home')}
-        onEmployee={() => setScreen('employee')}
-        onPartner={() => setScreen('partner')}
-        onAdmin={() => setScreen('admin')}
         onBecomePartner={() => setScreen('create')}
         onLogin={() => setScreen('login')}
         isLoggedIn={isLoggedIn}
