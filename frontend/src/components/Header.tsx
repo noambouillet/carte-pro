@@ -47,7 +47,7 @@ function Header({
         <nav className="site-nav site-nav-actions" aria-label="Navigation principale">
           {!isLoggedIn && (
             <button className="nav-link" type="button" onClick={onBecomePartner}>
-              Devenir partenaire
+              Créer un compte
             </button>
           )}
           
