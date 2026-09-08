@@ -1,6 +1,8 @@
 import './Login.css'
 import { useState } from 'react'
 import { login } from '../api/Auth'
+import { getApiError } from '../api/Errors'
+import Modal from '../components/Modal'
 
 type LoginProps = {
   onCreateAccount: () => void
@@ -11,15 +13,14 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [showPartnerNotValidated, setShowPartnerNotValidated] = useState(false)
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
 
     try {
-      const loginPayload = { email, password }
-      const response = await login(loginPayload)
-      console.log('Login successful:', response)
+      const response = await login({ email, password })
       if (response.role === 'employee') {
         onLoginSuccess('employee')
       } else if (response.role === 'partner') {
@@ -29,8 +30,14 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
       } else {
         setError("L'e-mail ou le mot de passe est incorrect.")
       }
-    } catch {
-      setError("L'e-mail ou le mot de passe est incorrect.")
+    } catch (caughtError) {
+      const { error: code } = getApiError(caughtError)
+
+      if (code === 'partner_not_validated') {
+        setShowPartnerNotValidated(true)
+      } else {
+        setError("L'e-mail ou le mot de passe est incorrect.")
+      }
     }
   }
 
@@ -38,7 +45,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
     <section className="login-card" aria-label="Connexion">
       <h1>Se connecter</h1>
       <p className="intro">
-        Accédez à votre espace d'administration de la transition numérique
+        Accédez à votre espace d&apos;administration de la transition numérique
         et gérez vos projets.
       </p>
 
@@ -98,6 +105,19 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
       <p className="legal">
         En continuant, vous acceptez les conditions générales d&apos;utilisation.
       </p>
+
+      {showPartnerNotValidated && (
+        <Modal
+          title="Compte en cours de vérification"
+          onClose={() => setShowPartnerNotValidated(false)}
+        >
+          <p>
+            Votre compte partenaire n&apos;est pas encore vérifié. Un
+            administrateur doit valider votre dossier avant que vous
+            puissiez vous connecter.
+          </p>
+        </Modal>
+      )}
     </section>
   )
 }
