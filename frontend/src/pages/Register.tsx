@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { cleanSiren, formatSiren, validateSiren } from '../components/Siren'
 import { registerEmployee } from '../api/Employee'
 import { registerPartner } from '../api/Partners'
+import Modal from '../components/Modal'
 import './Register.css'
 
 type CreateAccountProps = {
@@ -14,6 +15,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
   const [role, setRole] = useState('')
   const [touched, setTouched] = useState({ siren: false, purpose: false })
   const [submitted, setSubmitted] = useState(false)
+  const [showPartnerPendingModal, setShowPartnerPendingModal] = useState(false)
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -58,6 +60,8 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
             establishmentAddress,
             establishmentPhone
         )
+        setShowPartnerPendingModal(true)
+        return
       }
 
       onBackToLogin()
@@ -253,6 +257,23 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
           Retour à la connexion
         </button>
       </form>
+
+      {showPartnerPendingModal && (
+        <Modal
+          title="Compte créé"
+          closeLabel="Retour à la connexion"
+          onClose={() => {
+            setShowPartnerPendingModal(false)
+            onBackToLogin()
+          }}
+        >
+          <p>Votre compte partenaire a bien été créé.</p>
+          <p>
+            Il va être examiné par un administrateur avant validation. Vous
+            pourrez vous connecter une fois votre dossier accepté.
+          </p>
+        </Modal>
+      )}
     </section>
   )
 }
