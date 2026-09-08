@@ -1,9 +1,12 @@
-/* Classes used by several screens: containers, bands, partner cards,
-   buttons and form fields.
-   Loaded right after App.css, before the component stylesheets. */
+.form-error {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-left: 4px solid #ce0500;
+  background: #fdecec;
+  color: #ce0500;
+  font-weight: 700;
+}
 
-/* Shared centred container for every content area: one single definition
-   of the maximum width and the side margins. */
 .home,
 .band-inner,
 .dash-inner,

@@ -79,7 +79,7 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
               type="button"
               onClick={onBecomePartner}
             >
-              Devenir partenaire
+              Créer un compte
             </button>
           </div>
           )}
