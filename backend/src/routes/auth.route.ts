@@ -25,11 +25,11 @@ const meResponseSchema = t.Union([
     role: t.Literal("partner"),
     partner: t.Object({
       id: t.String(),
-      name: t.String(),
-      siren: t.String(),
-      objetSocial: t.String(),
-      address: t.String(),
-      email: t.String(),
+      name: t.Union([t.String(), t.Null()]),
+      siren: t.Union([t.String(), t.Null()]),
+      objetSocial: t.Union([t.String(), t.Null()]),
+      address: t.Union([t.String(), t.Null()]),
+      email: t.Union([t.String(), t.Null()]),
       status: partnerStatusEnum,
     }),
   }),
@@ -71,7 +71,7 @@ const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           : employeeRows[0]
           ? { id: employeeRows[0].id, passwordHash: employeeRows[0].passwordHash, role: "employee" as const, status: employeeRows[0].status } : null;
 
-      if (!account || !(await verifyPassword(password, account.passwordHash))) {
+      if (!account || !account.passwordHash || !(await verifyPassword(password, account.passwordHash))) {
         set.status = 401;
         return { error: "invalid_credentials" };
       }

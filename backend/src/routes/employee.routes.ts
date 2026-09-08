@@ -1,14 +1,14 @@
 import { Elysia, t } from "elysia";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { database } from "../config/database";
 import { authPlugin, requireEmployee, requireActiveEmployee, hashPassword } from "../middleware/auth";
 import { qrJwtPlugin } from "../middleware/qr";
-import { employees, employeeBalances, transactions, qrCodes } from "../../db/drizzle/schema";
+import { employees, employeeBalances, transactionHistory, qrCodes, partners } from "../../db/drizzle/schema";
 
 const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
 const errorSchema = t.Object({ error: t.String() });
 
-export const employeeRoutes = new Elysia({ prefix: "/api/v1/employee" })
+export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
   .use(authPlugin)
   .use(qrJwtPlugin)
   .post("/register", async ({ body, set }) => {
@@ -98,26 +98,46 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employee" })
       },
     }
   )
-  .get("/transactions", async ({ authUser }) => {
+  .get("/transactions", async ({ authUser, query }) => {
+    const since = query.since ? new Date(query.since).toISOString() : undefined;
+
       const result = await database
         .select({
-          id: transactions.id,
-          partnerId: transactions.partnerId,
-          qrCodeId: transactions.qrCodeId,
-          amountCents: transactions.amountCents,
-          idempotencyKey: transactions.idempotencyKey,
-          createdAt: transactions.createdAt,
+          id: transactionHistory.id,
+          occurredAt: transactionHistory.occurredAt,
+          partnerId: transactionHistory.partnerId,
+          partnerName: partners.name,
+          partnerAddress: partners.address,
+          qrCodeId: transactionHistory.qrCodeId,
+          amountCents: transactionHistory.amountCents,
+          status: transactionHistory.status,
         })
-        .from(transactions)
-        .where(eq(transactions.employeeId, authUser!.id))
-        .orderBy(desc(transactions.createdAt));
+        .from(transactionHistory)
+        .leftJoin(
+          partners,
+          eq(partners.id, transactionHistory.partnerId),
+        )
+        .where(
+          and(
+            eq(transactionHistory.employeeId, authUser!.id),
+            since ? gte(transactionHistory.occurredAt, since) : undefined
+          )
+        )
+        .orderBy(
+          desc(transactionHistory.occurredAt),
+        )
+        .limit(1000);
 
       return {
         transactions: result.map((row) => ({
-          ...row,
           id: String(row.id),
-          partnerId: String(row.partnerId),
-          qrCodeId: row.qrCodeId ? String(row.qrCodeId) : null,
+          occurredAt: row.occurredAt,
+          partnerId: row.partnerId !== null ? String(row.partnerId) : null,
+          partnerName: row.partnerName,
+          partnerAddress: row.partnerAddress,
+          qrCodeId: row.qrCodeId !== null ? String(row.qrCodeId) : null,
+          amountCents: Number(row.amountCents),
+          status: row.status,
         })),
       };
     },
@@ -128,19 +148,36 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employee" })
           transactions: t.Array(
             t.Object({
               id: t.String(),
-              partnerId: t.String(),
-              qrCodeId: t.Union([t.String(), t.Null()]),
+              occurredAt: t.String(),
+              partnerId: t.Union([
+                t.String(),
+                t.Null(),
+              ]),
+              partnerName: t.Union([
+                t.String(),
+                t.Null(),
+              ]),
+              partnerAddress: t.Union([
+                t.String(),
+                t.Null(),
+              ]),
+              qrCodeId: t.Union([
+                t.String(),
+                t.Null(),
+              ]),
               amountCents: t.Integer(),
-              idempotencyKey: t.String(),
-              createdAt: t.String(),
-            })
+              status: t.String(),
+            }),
           ),
         }),
         401: errorSchema,
         403: errorSchema,
       },
-      detail: { summary: "Transaction history for the logged-in employee", tags: ["employee"] },
-    }
+      detail: {
+        summary: "Transaction history for the logged-in employee",
+        tags: ["employee"],
+      },
+    },
   )
   .post("/qrcode", async ({ authUser, qrJwt, set }) => {
       const jti = crypto.randomUUID();

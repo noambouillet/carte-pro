@@ -14,7 +14,8 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     try {
-      const response = await login({ email, password })
+      const loginPayload = { email, password }
+      const response = await login(loginPayload)
       console.log('Login successful:', response)
       if (response.role === 'employee') {
         onLoginSuccess('employee')
@@ -38,7 +39,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
         et gérez vos projets.
       </p>
 
-      <form 
+      <form
         className="login-form"
         noValidate
         onSubmit={handleSubmit}

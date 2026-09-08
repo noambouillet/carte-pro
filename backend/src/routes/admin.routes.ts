@@ -56,8 +56,8 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
           partners: t.Array(
             t.Object({
               id: t.String(),
-              name: t.String(),
-              email: t.String(),
+              name: t.Union([t.String(), t.Null()]),
+              email: t.Union([t.String(), t.Null()]),
               status: partnerStatusEnum,
               createdAt: t.String(),
             })
