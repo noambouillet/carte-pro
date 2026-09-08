@@ -4,8 +4,12 @@ import './Partner.css'
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Account, AccountType } from '../types/account'
 import { Amount, SimulationNotice } from '../components/Simulation'
-import type { ReferralRequest } from '../types/referral'
-import { getAdminAccounts, grantCredit, type AdminAccountsResponse } from '../api/Admin'
+import {
+  getAdminAccounts,
+  grantCredit,
+  validatePartner,
+  type AdminAccountsResponse,
+} from '../api/Admin'
 import { getApiError } from '../api/Errors'
 
 type Kpi = {
@@ -47,37 +51,6 @@ const regions = [
   { name: 'Nouvelle-Aquitaine', count: 498 },
   { name: 'Hauts-de-France', count: 431 },
   { name: 'Grand Est', count: 402 },
-]
-
-const referralRequests: ReferralRequest[] = [
-  {
-    establishment: 'Fleuriste Camélia',
-    city: 'Angers',
-    category: 'Commerce',
-    siren: '904 118 552',
-    submittedAt: '29/08/2026',
-  },
-  {
-    establishment: 'Cinéma Le Rialto',
-    city: 'Metz',
-    category: 'Culture',
-    siren: '512 663 041',
-    submittedAt: '28/08/2026',
-  },
-  {
-    establishment: 'Traiteur Les Deux Tables',
-    city: 'Dijon',
-    category: 'Restauration',
-    siren: '833 907 216 ',
-    submittedAt: '28/08/2026',
-  },
-  {
-    establishment: 'Studio Pilates Aria',
-    city: 'Reims',
-    category: 'Sport',
-    siren: '789 452 330',
-    submittedAt: '27/08/2026',
-  },
 ]
 
 const accounts: Account[] = [
@@ -144,61 +117,79 @@ type Tab = (typeof tabs)[number]
 
 function Admin() {
   const [tab, setTab] = useState<Tab>(tabs[0])
-  const [requests, setRequests] = useState<ReferralRequest[]>(referralRequests)
   const [accountList, setAccountList] = useState<Account[]>(accounts)
   const [accountFilter, setAccountFilter] = useState<'all' | AccountType>('all')
   const [accountQuery, setAccountQuery] = useState('')
 
-  const [employeesApiList, setEmployeesApiList] = useState<AdminAccountsResponse['employees']>([])
-  const [employeesLoading, setEmployeesLoading] = useState(false)
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccountsResponse | null>(null)
+  const [accountsLoading, setAccountsLoading] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    setEmployeesLoading(true)
+  const [pendingDecision, setPendingDecision] = useState<
+    { partnerId: string; kind: 'approve' | 'reject' } | null
+  >(null)
+  const [decisionReason, setDecisionReason] = useState('')
+  const [decisionSubmitting, setDecisionSubmitting] = useState(false)
+  const [decisionError, setDecisionError] = useState('')
+
+  const fetchAccounts = () => {
+    setAccountsLoading(true)
     getAdminAccounts()
       .then((data) => {
-        if (!cancelled) {
-          setEmployeesApiList(data.employees)
-        }
+        setAdminAccounts(data)
       })
       .catch((err) => {
-        console.error('Erreur chargement salariés:', getApiError(err).message)
+        console.error('Erreur chargement des comptes:', getApiError(err).message)
       })
       .finally(() => {
-        if (!cancelled) setEmployeesLoading(false)
+        setAccountsLoading(false)
       })
+  }
 
-    return () => {
-      cancelled = true
-    }
+  useEffect(() => {
+    fetchAccounts()
   }, [])
+
+  const pendingPartners = useMemo(() => {
+    if (!adminAccounts) return []
+    return adminAccounts.partners.filter((p) => p.status === 'pending')
+  }, [adminAccounts])
 
   const maxRegion = Math.max(...regions.map((region) => region.count))
 
-  const decideRequest = (siren: string) => {
-    setRequests((current) => current.filter((request) => request.siren !== siren))
-  }
-
-  const [pendingDecision, setPendingDecision] = useState<
-    { siren: string; kind: 'approve' | 'reject' } | null
-  >(null)
-  const [decisionReason, setDecisionReason] = useState('')
-
-  const openDecision = (siren: string, kind: 'approve' | 'reject') => {
-    setPendingDecision({ siren, kind })
+  const openDecision = (partnerId: string, kind: 'approve' | 'reject') => {
+    setPendingDecision({ partnerId, kind })
     setDecisionReason('')
+    setDecisionError('')
   }
 
   const cancelDecision = () => {
     setPendingDecision(null)
     setDecisionReason('')
+    setDecisionError('')
   }
 
-  const confirmDecision = () => {
-    if (!pendingDecision) return
-    decideRequest(pendingDecision.siren)
-    setPendingDecision(null)
-    setDecisionReason('')
+  const confirmDecision = async () => {
+    if (!pendingDecision || !decisionReason.trim()) return
+
+    setDecisionSubmitting(true)
+    setDecisionError('')
+
+    try {
+      await validatePartner(
+        pendingDecision.partnerId,
+        pendingDecision.kind === 'approve' ? 'approved' : 'rejected',
+        decisionReason.trim(),
+      )
+      setPendingDecision(null)
+      setDecisionReason('')
+      fetchAccounts()
+    } catch (err) {
+      setDecisionError(
+        getApiError(err).message ?? "Échec lors de l'enregistrement de la décision.",
+      )
+    } finally {
+      setDecisionSubmitting(false)
+    }
   }
 
   const setAccountStatus = (name: string, status: Account['status']) => {
@@ -234,12 +225,13 @@ function Admin() {
   const numericAmount = amountPerEmployee === '' ? 0 : amountPerEmployee
 
   const subsidyEmployees = useMemo(() => {
-    return employeesApiList.map((emp) => ({
+    if (!adminAccounts) return []
+    return adminAccounts.employees.map((emp) => ({
       id: Number(emp.id),
       name: `${emp.firstName} ${emp.lastName}`,
       email: emp.email,
     }))
-  }, [employeesApiList])
+  }, [adminAccounts])
 
   const visibleSubsidyEmployees = useMemo(() => {
     const search = employeeQuery.trim().toLowerCase()
@@ -333,9 +325,6 @@ function Admin() {
             <h2 className="band-title" id="admin-regions-title">
               Régions les plus actives
             </h2>
-            <button className="band-link" type="button">
-              Télécharger les données (CSV)
-            </button>
           </div>
 
           <ol className="admin-region-list">
@@ -367,113 +356,131 @@ function Admin() {
             </h1>
           </div>
           <span className="admin-requests-count">
-            {requests.length} dossier{requests.length > 1 ? 's' : ''}
+            {pendingPartners.length} dossier{pendingPartners.length > 1 ? 's' : ''}
           </span>
         </div>
 
         <div className="history-card">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th scope="col">Établissement</th>
-                <th scope="col">Catégorie</th>
-                <th scope="col">SIREN</th>
-                <th scope="col">Déposée le</th>
-                <th scope="col">Décision</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((request) => (
-                <Fragment key={request.siren}>
-                  <tr>
-                    <td>
-                      <span className="history-partner">
-                        {request.establishment}
-                      </span>
-                      <span className="history-city">{request.city}</span>
-                    </td>
-                    <td>{request.category}</td>
-                    <td className="admin-requests-siren">{request.siren}</td>
-                    <td>{request.submittedAt}</td>
-                    <td>
-                      <div className="admin-requests-actions">
-                        <button
-                          className="admin-approve"
-                          type="button"
-                          onClick={() => openDecision(request.siren, 'approve')}
-                        >
-                          Valider
-                        </button>
-                        <button
-                          className="admin-reject"
-                          type="button"
-                          onClick={() => openDecision(request.siren, 'reject')}
-                        >
-                          Refuser
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+          {accountsLoading ? (
+            <p>Chargement des demandes…</p>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th scope="col">Établissement</th>
+                  <th scope="col">Contact / Email</th>
+                  <th scope="col">Déposée le</th>
+                  <th scope="col">Décision</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingPartners.map((partner) => {
+                  const formattedDate = partner.createdAt
+                    ? new Date(partner.createdAt).toLocaleDateString('fr-FR')
+                    : 'Date inconnue'
 
-                  {pendingDecision?.siren === request.siren && (
-                    <tr className="admin-decision-row">
-                      <td colSpan={5}>
-                        <div className="admin-decision-form">
-                          <div className="admin-decision-field">
-                            <label htmlFor={`decision-reason-${request.siren}`}>
-                              {pendingDecision.kind === 'approve'
-                                ? 'Motif de validation'
-                                : 'Motif de refus'}
-                            </label>
-                            <input
-                              id={`decision-reason-${request.siren}`}
-                              type="text"
-                              value={decisionReason}
-                              onChange={(event) =>
-                                setDecisionReason(event.target.value)
-                              }
-                              placeholder={
-                                pendingDecision.kind === 'approve'
-                                  ? 'Ex. : dossier conforme, SIREN vérifié.'
-                                  : 'Ex. : pièces manquantes, activité hors périmètre.'
-                              }
-                              autoFocus
-                            />
-                          </div>
-
-                          <div className="admin-decision-buttons">
+                  return (
+                    <Fragment key={partner.id}>
+                      <tr>
+                        <td>
+                          <span className="history-partner">
+                            {partner.name || 'Nom non renseigné'}
+                          </span>
+                        </td>
+                        <td>{partner.email || 'Non renseigné'}</td>
+                        <td>{formattedDate}</td>
+                        <td>
+                          <div className="admin-requests-actions">
                             <button
-                              className={
-                                pendingDecision.kind === 'approve'
-                                  ? 'admin-approve'
-                                  : 'admin-reject'
-                              }
+                              className="admin-approve"
                               type="button"
-                              disabled={decisionReason.trim() === ''}
-                              onClick={confirmDecision}
+                              onClick={() => openDecision(partner.id, 'approve')}
                             >
-                              {pendingDecision.kind === 'approve'
-                                ? 'Confirmer la validation'
-                                : 'Confirmer le refus'}
+                              Valider
                             </button>
                             <button
-                              className="admin-action"
+                              className="admin-reject"
                               type="button"
-                              onClick={cancelDecision}
+                              onClick={() => openDecision(partner.id, 'reject')}
                             >
-                              Annuler
+                              Refuser
                             </button>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
 
-          {requests.length === 0 && (
+                      {pendingDecision?.partnerId === partner.id && (
+                        <tr className="admin-decision-row">
+                          <td colSpan={4}>
+                            <div className="admin-decision-form">
+                              <div className="admin-decision-field">
+                                <label htmlFor={`decision-reason-${partner.id}`}>
+                                  {pendingDecision.kind === 'approve'
+                                    ? 'Motif de validation'
+                                    : 'Motif de refus'}
+                                </label>
+                                <input
+                                  id={`decision-reason-${partner.id}`}
+                                  type="text"
+                                  value={decisionReason}
+                                  onChange={(event) =>
+                                    setDecisionReason(event.target.value)
+                                  }
+                                  placeholder={
+                                    pendingDecision.kind === 'approve'
+                                      ? 'Ex. : dossier conforme, SIREN vérifié.'
+                                      : 'Ex. : pièces manquantes, activité hors périmètre.'
+                                  }
+                                  autoFocus
+                                />
+                              </div>
+
+                              {decisionError && (
+                                <p className="pay-receipt" role="alert">
+                                  {decisionError}
+                                </p>
+                              )}
+
+                              <div className="admin-decision-buttons">
+                                <button
+                                  className={
+                                    pendingDecision.kind === 'approve'
+                                      ? 'admin-approve'
+                                      : 'admin-reject'
+                                  }
+                                  type="button"
+                                  disabled={
+                                    decisionReason.trim() === '' || decisionSubmitting
+                                  }
+                                  onClick={confirmDecision}
+                                >
+                                  {decisionSubmitting
+                                    ? 'Enregistrement…'
+                                    : pendingDecision.kind === 'approve'
+                                      ? 'Confirmer la validation'
+                                      : 'Confirmer le refus'}
+                                </button>
+                                <button
+                                  className="admin-action"
+                                  type="button"
+                                  disabled={decisionSubmitting}
+                                  onClick={cancelDecision}
+                                >
+                                  Annuler
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {!accountsLoading && pendingPartners.length === 0 && (
             <p className="admin-requests-empty">
               Aucune demande en attente.
             </p>
@@ -696,7 +703,7 @@ function Admin() {
               <h2 id="subsidy-employees-title">Salariés</h2>
             </div>
 
-            {employeesLoading ? (
+            {accountsLoading ? (
               <p>Chargement des salariés…</p>
             ) : (
               <table className="history-table admin-subsidy-table">
@@ -726,7 +733,7 @@ function Admin() {
               </table>
             )}
 
-            {!employeesLoading && visibleSubsidyEmployees.length === 0 && (
+            {!accountsLoading && visibleSubsidyEmployees.length === 0 && (
               <p className="admin-requests-empty">
                 Aucun salarié ne correspond à cette recherche.
               </p>
