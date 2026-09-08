@@ -10,12 +10,14 @@ type LoginProps = {
 function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    setError('')
+
     try {
       const response = await login({ email, password })
-      console.log('Login successful:', response)
       if (response.role === 'employee') {
         onLoginSuccess('employee')
       } else if (response.role === 'partner') {
@@ -23,10 +25,10 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
       } else if (response.role === 'admin') {
         onLoginSuccess('admin')
       } else {
-        console.error('Unknown role:', response.role)
+        setError("L'e-mail ou le mot de passe est incorrect.")
       }
-    } catch (error) {
-      console.error('Login failed:', error)
+    } catch {
+      setError("L'e-mail ou le mot de passe est incorrect.")
     }
   }
 
@@ -38,7 +40,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
         et gérez vos projets.
       </p>
 
-      <form 
+      <form
         className="login-form"
         noValidate
         onSubmit={handleSubmit}
@@ -67,6 +69,12 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
+
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
 
         <button className="primary-button" type="submit">
           Se connecter
