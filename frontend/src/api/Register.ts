@@ -2,7 +2,7 @@ import api from './AxiosConfig'
 
 export const registerEmployee = async (firstName: string, lastName: string, email: string, password: string) => {
   try {
-    const response = await api.post('/employee/register', {
+    const response = await api.post('/employees/register', {
         first_name: firstName,
         last_name: lastName,
         email,
@@ -27,7 +27,7 @@ export const registerPartner = async (
     establishmentPhone: string
 ) => {
   try {
-    const response = await api.post('/partner/register', {
+    const response = await api.post('/partners/register', {
         first_name: firstName,
         last_name: lastName,
         email,

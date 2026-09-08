@@ -1,56 +1,137 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Qr from '../components/Qr'
 import { Amount, SimulationNotice } from '../components/Simulation'
 import './Employee.css'
 import './Partner.css'
 import Network from './Network'
-import type { Transaction } from '../types/transaction'
 
-export const transactions: Transaction[] = [
-  { date: '28/08/2026', partner: 'Boulangerie Petit Grain', city: 'Lyon 3e', amount: 9.8, status: 'Validée' },
-  { date: '27/08/2026', partner: 'Restaurant Le Comptoir Sud', city: 'Lyon 2e', amount: 21.5, status: 'Validée' },
-  { date: '26/08/2026', partner: 'Épicerie Marché & Cie', city: 'Lyon 7e', amount: 34.15, status: 'Validée' },
-  { date: '25/08/2026', partner: 'Salle de sport Cadence', city: 'Lyon 3e', amount: 45, status: 'Validée' },
-  { date: '22/08/2026', partner: 'Librairie du Vieux Pont', city: 'Lyon 1er', amount: 18.9, status: 'Validée' },
-  { date: '31/07/2026', partner: 'Boulangerie Petit Grain', city: 'Lyon 3e', amount: 7.4, status: 'Validée' },
-  { date: '30/07/2026', partner: 'Restaurant Le Comptoir Sud', city: 'Lyon 2e', amount: 19.2, status: 'Validée' },
-  { date: '27/07/2026', partner: 'Épicerie Marché & Cie', city: 'Lyon 7e', amount: 41.05, status: 'Validée' },
-  { date: '21/07/2026', partner: 'Salle de sport Cadence', city: 'Lyon 3e', amount: 45, status: 'Validée' },
-  { date: '16/07/2026', partner: 'Boulangerie Petit Grain', city: 'Lyon 3e', amount: 6.3, status: 'Validée' },
-  { date: '09/07/2026', partner: 'Librairie du Vieux Pont', city: 'Lyon 1er', amount: 12.5, status: 'Validée' },
-  { date: '03/07/2026', partner: 'Restaurant Le Comptoir Sud', city: 'Lyon 2e', amount: 23.8, status: 'Validée' },
-]
+import { getEmployeeBalance, getEmployeeTransactions, generateEmployeeQrCode, type EmployeeTransaction } from '../api/Employee'
+import { getMe, type EmployeeMe } from '../api/Auth'
+import { getApiError } from '../api/Errors'
 
-export const euro = (amount: number) =>
-  amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })
+export const euro = (cents: number) => (cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2 })
+
+const formatDateFr = (iso: string) => {
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 
 const PREVIEW = 5
 const tabs = ['Tableau de bord', 'Réseau des partenaires']
 
 function Employee() {
+  const [profile, setProfile] = useState<EmployeeMe['employee'] | null>(null)
+  const [balanceCents, setBalanceCents] = useState<number | null>(null)
+  const [transactions, setTransactions] = useState<EmployeeTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [showQr, setShowQr] = useState(false)
+  const [qrToken, setQrToken] = useState<string | null>(null)
+  const [qrExpiresAt, setQrExpiresAt] = useState<string | null>(null)
+  const [qrError, setQrError] = useState<string | null>(null)
+  const [qrLoading, setQrLoading] = useState(false)
+
   const [showAll, setShowAll] = useState(false)
   const [tab, setTab] = useState(tabs[0])
 
+  useEffect(() => {
+    let cancelled = false
+
+    Promise.all([getMe(), getEmployeeBalance(), getEmployeeTransactions()])
+      .then(([me, balance, tx]) => {
+        if (cancelled)
+          return
+        if (me.role !== 'employee') {
+          setError('Compte non employé.')
+          return
+        }
+        setProfile(me.employee)
+        setBalanceCents(balance.balanceCents)
+        setTransactions(tx.transactions)
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(getApiError(err).message ?? 'Impossible de charger vos données.')
+      })
+      .finally(() => {
+        if (!cancelled)
+          setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const visible = showAll ? transactions : transactions.slice(0, PREVIEW)
+
+  const [, forceTick] = useState(0)
+  useEffect(() => {
+    if (!showQr || !qrExpiresAt)
+      return
+    const id = setInterval(() => forceTick((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [showQr, qrExpiresAt])
+
+  const handleGenerateQr = async () => {
+    setQrLoading(true)
+    setQrError(null)
+    try {
+      const { token, expiresAt } = await generateEmployeeQrCode()
+      setQrToken(token)
+      setQrExpiresAt(expiresAt)
+      setShowQr(true)
+    } catch (err) {
+      setQrError(getApiError(err).message ?? 'Impossible de générer le QR code.')
+    } finally {
+      setQrLoading(false)
+    }
+  }
+
+  const renderTabs = () => (
+    <nav className="dash-tabs" aria-label="Sections de l'espace employé">
+      {tabs.map((item) => (
+        <button
+          key={item}
+          className={item === tab ? 'dash-tab dash-tab-active' : 'dash-tab'}
+          type="button"
+          aria-current={item === tab ? 'page' : undefined}
+          onClick={() => setTab(item)}
+        >
+          {item}
+        </button>
+      ))}
+    </nav>
+  )
+
+  if (loading) {
+    return (
+      <>
+        {renderTabs()}
+        <div className="dash-inner dash-body">
+          <p>Chargement…</p>
+        </div>
+      </>
+    )
+  }
+
+  if (error) {
+    return (
+      <>
+        {renderTabs()}
+        <div className="dash-inner dash-body">
+          <p role="alert">{error}</p>
+        </div>
+      </>
+    )
+  }
 
   if (tab === tabs[1]) {
     return (
       <>
-        <nav className="dash-tabs" aria-label="Sections de l'espace employé">
-          {tabs.map((item) => (
-            <button
-              key={item}
-              className={item === tab ? 'dash-tab dash-tab-active' : 'dash-tab'}
-              type="button"
-              aria-current={item === tab ? 'page' : undefined}
-              onClick={() => setTab(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
-        <Network establishment="Camille Ferrand" />
+        {renderTabs()}
+        <Network establishment={profile ? `${profile.firstName} ${profile.lastName}` : ''} />
       </>
     )
   }
@@ -58,20 +139,7 @@ function Employee() {
   if (showQr) {
     return (
       <>
-        <nav className="dash-tabs" aria-label="Sections de l'espace employé">
-          {tabs.map((item) => (
-            <button
-              key={item}
-              className={item === tab ? 'dash-tab dash-tab-active' : 'dash-tab'}
-              type="button"
-              aria-current={item === tab ? 'page' : undefined}
-              onClick={() => setTab(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
-
+        {renderTabs()}
         <div className="dash-inner dash-body">
           <h1 className="dash-title">Mon QR code de paiement</h1>
           <SimulationNotice />
@@ -81,8 +149,7 @@ function Employee() {
           </p>
 
           <div className="qr-card">
-            <Qr />
-            <p className="qr-value">CP-4471-8820-3106</p>
+            <Qr value={qrToken ?? ''} />
           </div>
 
           <p>
@@ -101,22 +168,12 @@ function Employee() {
 
   return (
     <>
-      <nav className="dash-tabs" aria-label="Sections de l'espace employé">
-        {tabs.map((item) => (
-          <button
-            key={item}
-            className={item === tab ? 'dash-tab dash-tab-active' : 'dash-tab'}
-            type="button"
-            aria-current={item === tab ? 'page' : undefined}
-            onClick={() => setTab(item)}
-          >
-            {item}
-          </button>
-        ))}
-      </nav>
+      {renderTabs()}
 
       <div className="dash-inner dash-body">
-        <h1 className="dash-title">Bonjour Camille Ferrand</h1>
+        <h1 className="dash-title">
+          Bonjour {profile ? `${profile.firstName} ${profile.lastName}` : ''}
+        </h1>
         <SimulationNotice />
 
         <div className="dash-grid">
@@ -125,9 +182,8 @@ function Employee() {
               Solde Ticket tout disponible
             </h2>
             <p className="balance-value">
-              <Amount>168,40 €</Amount>
+              <Amount>{balanceCents !== null ? `${euro(balanceCents)} €` : '…'}</Amount>
             </p>
-            <p className="balance-meta">31/08/2026 à 09:12</p>
           </section>
 
           <aside className="pay-card" aria-labelledby="pay-title">
@@ -137,12 +193,14 @@ function Employee() {
               peut servir qu&apos;une seule fois.
             </p>
 
+            {qrError && <p role="alert">{qrError}</p>}
             <button
               className="pay-primary"
               type="button"
-              onClick={() => setShowQr(true)}
+              onClick={handleGenerateQr}
+              disabled={qrLoading}
             >
-              Générer mon QR code de paiement
+              {qrLoading ? 'Génération…' : 'Générer mon QR code de paiement'}
             </button>
           </aside>
         </div>
@@ -155,8 +213,8 @@ function Employee() {
           </div>
 
           <p className="history-intro">
-            Une transaction validée est définitive : elle ne peut pas être
-            annulée.
+            Retrouvez ici vos crédits accordés et vos paiements effectués.
+            Une transaction validée est définitive : elle ne peut pas être annulée.
           </p>
 
           <div className="history-card">
@@ -165,34 +223,72 @@ function Employee() {
                 <tr>
                   <th scope="col">Date</th>
                   <th scope="col">Partenaire</th>
-                  <th scope="col" className="cell-amount">
-                    Montant
-                  </th>
+                  <th scope="col" className="cell-amount">Montant</th>
                   <th scope="col">Statut</th>
                 </tr>
               </thead>
               <tbody>
-                {visible.map((line) => (
-                  <tr key={`${line.date}-${line.partner}-${line.amount}`}>
-                    <td>{line.date}</td>
-                    <td>
-                      <span className="history-partner">{line.partner}</span>
-                      <span className="history-city">{line.city}</span>
-                    </td>
-                    <td className="cell-amount">
-                      <Amount>− {euro(line.amount)} €</Amount>
-                    </td>
-                    <td>
-                      <span className="status-badge">{line.status}</span>
-                    </td>
-                  </tr>
-                ))}
+                {visible.map((line) => {
+                  const isCredit = line.status === 'credit_granted'
+                  const isApproved = line.status === 'approved'
+
+                  return (
+                    <tr key={`${line.status}-${line.id}`}>
+                      <td>{formatDateFr(line.occurredAt)}</td>
+
+                      <td>
+                        {isCredit ? (
+                          <>
+                            <span className="history-partner">
+                              Crédit accordé
+                            </span>
+                            <span className="history-city">
+                              Crédit Carte Pro
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="history-partner">
+                              {line.partnerName}
+                            </span>
+                            <span className="history-city">
+                              {line.partnerAddress}
+                            </span>
+                          </>
+                        )}
+                      </td>
+
+                      <td className="cell-amount">
+                        <Amount>
+                          {isCredit ? '+ ' : '− '}
+                          {euro(Math.abs(line.amountCents))} €
+                        </Amount>
+                      </td>
+
+                      <td>
+                        {isCredit ? (
+                          <span className="status-badge">
+                            Crédit reçu
+                          </span>
+                        ) : isApproved ? (
+                          <span className="status-badge">
+                            Validée
+                          </span>
+                        ) : (
+                          <span className="status-badge">
+                            Refusée
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
 
             <p className="history-footer">
               {visible.length} transactions sur {transactions.length}
-              {showAll ? null : (
+              {showAll || transactions.length <= PREVIEW ? null : (
                 <>
                   {' — '}
                   <button

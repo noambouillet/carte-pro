@@ -27,7 +27,7 @@ export async function registerEmployee(
 }
 
 export async function getEmployeeBalance(): Promise<{ balanceCents: number }> {
-  const { data } = await api.get<{ balanceCents: number }>("/employee/balance");
+  const { data } = await api.get<{ balanceCents: number }>("/employees/balance");
   return data;
 }
 
