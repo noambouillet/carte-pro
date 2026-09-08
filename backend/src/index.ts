@@ -30,7 +30,15 @@ async function start() {
   try {
     await initializeDatabase();
 
-    const app = new Elysia()
+    const app = new Elysia({
+      serve: {
+        hostname: '127.0.0.1',
+        tls: {
+          cert: Bun.file('../certs/localhost.pem'),
+          key: Bun.file('../certs/localhost-key.pem'),
+        },
+      },
+    })
       .use(
         cors({
           origin: FRONTEND_URL,
@@ -84,7 +92,7 @@ async function start() {
       .use(employeeRoutes)
       .listen(PORT);
 
-    console.log(`Carte Pro is running on port http://${app.server?.hostname}:${app.server?.port}`);
+    console.log(`Carte Pro is running on port https://${app.server?.hostname}:${app.server?.port}`);
   } catch (error) {
     console.error("Failed to start application:", error);
     process.exit(1);
