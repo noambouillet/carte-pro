@@ -50,9 +50,11 @@ The server watches for file changes and reloads automatically. It listens on
 
 ## Routes
 
+Interactive docs (Swagger UI, OpenAPI 3.0): `https://localhost:3000/openapi`
+while the server is running. Not under `/api`, it sits at the server root.
+
 All routes are prefixed with `/api/v1`. Request and response shapes are
-defined next to each route with TypeBox, and Elysia serves interactive docs
-at `https://localhost:3000/openapi` while the server is running.
+defined next to each route with TypeBox.
 
 `/auth`
 
