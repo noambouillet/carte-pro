@@ -21,7 +21,7 @@ CREATE TABLE partners (
     last_name     TEXT,
     siren         CHAR(9) CHECK (siren ~ '^\d{9}$'),
     objet_social  TEXT,
-    address       TEXT,
+    region       TEXT,
     name          TEXT,
     email         CITEXT UNIQUE,
     phone         TEXT,

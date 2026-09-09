@@ -237,7 +237,7 @@ async function main() {
           name: p.name,
           siren: luhnSiren(),
           objetSocial: p.objetSocial,
-          address: "Adresse de test",
+          region: "region de test",
           email,
           passwordHash,
           status: "validated",

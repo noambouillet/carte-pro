@@ -23,7 +23,7 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
             siren: body.siren,
             objetSocial: body.socialPurpose,
             name: body.establishmentName,
-            address: body.establishmentAddress,
+            region: body.establishmentRegion,
             email: body.email,
             phone: body.establishmentPhone,
             passwordHash,
@@ -35,7 +35,7 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
             siren: partners.siren,
             socialPurpose: partners.objetSocial,
             establishmentName: partners.name,
-            establishmentAddress: partners.address,
+            establishmentRegion: partners.region,
             establishmentPhone: partners.phone,
             email: partners.email,
             status: partners.status,
@@ -72,7 +72,7 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
         }),
         socialPurpose: t.String({ minLength: 1 }),
         establishmentName: t.String({ minLength: 1 }),
-        establishmentAddress: t.String({ minLength: 1 }),
+        establishmentRegion: t.String({ minLength: 1 }),
         establishmentPhone: t.String({ minLength: 1 }),
       }),
       response: {
@@ -84,7 +84,7 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
             siren: t.String(),
             socialPurpose: t.String(),
             establishmentName: t.String(),
-            establishmentAddress: t.String(),
+            establishmentRegion: t.String(),
             establishmentPhone: t.String(),
             email: t.String(),
             status: partnerStatusEnum,
@@ -105,9 +105,9 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
   .get("/search", async ({ query }) => {
       const term = `%${query.q ?? ""}%`;
       const result = await database
-        .select({ id: partners.id, name: partners.name, address: partners.address, status: partners.status })
+        .select({ id: partners.id, name: partners.name, region: partners.region, status: partners.status })
         .from(partners)
-        .where(and(eq(partners.status, "validated"), or(ilike(partners.name, term), ilike(partners.address, term))))
+        .where(and(eq(partners.status, "validated"), or(ilike(partners.name, term), ilike(partners.region, term))))
         .orderBy(desc(partners.createdAt))
         .limit(20);
 
@@ -121,14 +121,14 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
             t.Object({
               id: t.String(),
               name: t.Union([t.String(), t.Null()]),
-              address: t.Union([t.String(), t.Null()]),
+              region: t.Union([t.String(), t.Null()]),
               status: partnerStatusEnum
             })
           ),
         }),
       },
       detail: {
-        summary: "Search validated partners by name or address",
+        summary: "Search validated partners by name or region",
         tags: ["partners"],
       },
     }

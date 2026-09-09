@@ -6,9 +6,11 @@ import type { Account, AccountType } from '../types/account'
 import { Amount, SimulationNotice } from '../components/Simulation'
 import {
   getAdminAccounts,
+  getScoreboard,
   grantCredit,
   validatePartner,
   type AdminAccountsResponse,
+  type ScoreboardResponse,
 } from '../api/Admin'
 import { getApiError } from '../api/Errors'
 
@@ -18,40 +20,6 @@ type Kpi = {
   hint: string
   warning?: boolean
 }
-
-const kpis: Kpi[] = [
-  {
-    label: 'Volume de transactions',
-    value: '41,7 M€',
-    hint: 'Cumul 2026',
-  },
-  {
-    label: 'Partenaires actifs',
-    value: '5 731',
-    hint: '+ 214 sur 30 jours',
-  },
-  {
-    label: 'Salariés actifs',
-    value: '128 400',
-    hint: 'Sur 1 246 employeurs adhérents',
-  },
-  {
-    label: 'Demandes en attente',
-    value: '4',
-    hint: 'Délai moyen d’instruction : 3,2 jours',
-    warning: true,
-  },
-]
-
-const regions = [
-  { name: 'Île-de-France', count: 1240 },
-  { name: 'Auvergne-Rhône-Alpes', count: 812 },
-  { name: 'Provence-Alpes-Côte d’Azur', count: 604 },
-  { name: 'Occitanie', count: 517 },
-  { name: 'Nouvelle-Aquitaine', count: 498 },
-  { name: 'Hauts-de-France', count: 431 },
-  { name: 'Grand Est', count: 402 },
-]
 
 const accounts: Account[] = [
   {
@@ -122,6 +90,7 @@ function Admin() {
   const [accountQuery, setAccountQuery] = useState('')
 
   const [adminAccounts, setAdminAccounts] = useState<AdminAccountsResponse | null>(null)
+  const [scoreboard, setScoreboard] = useState<ScoreboardResponse | null>(null)
   const [accountsLoading, setAccountsLoading] = useState(false)
 
   const [pendingDecision, setPendingDecision] = useState<
@@ -131,14 +100,15 @@ function Admin() {
   const [decisionSubmitting, setDecisionSubmitting] = useState(false)
   const [decisionError, setDecisionError] = useState('')
 
-  const fetchAccounts = () => {
+  const fetchData = () => {
     setAccountsLoading(true)
-    getAdminAccounts()
-      .then((data) => {
-        setAdminAccounts(data)
+    Promise.all([getAdminAccounts(), getScoreboard()])
+      .then(([accountsData, scoreboardData]) => {
+        setAdminAccounts(accountsData)
+        setScoreboard(scoreboardData)
       })
       .catch((err) => {
-        console.error('Erreur chargement des comptes:', getApiError(err).message)
+        console.error('Erreur chargement des données admin:', getApiError(err).message)
       })
       .finally(() => {
         setAccountsLoading(false)
@@ -146,15 +116,79 @@ function Admin() {
   }
 
   useEffect(() => {
-    fetchAccounts()
+    fetchData()
   }, [])
+
+  const dynamicKpis: Kpi[] = useMemo(() => {
+    if (!scoreboard) {
+      return [
+        { label: 'Volume de transactions', value: '— €', hint: 'Chargement…' },
+        { label: 'Partenaires actifs', value: '—', hint: 'Chargement…' },
+        { label: 'Salariés actifs', value: '—', hint: 'Chargement…' },
+        { label: 'Demandes en attente', value: '—', hint: 'Chargement…' },
+      ]
+    }
+
+    const volumeInEuros = scoreboard.transactions.totalAmountCents / 100
+    const formattedVolume =
+      volumeInEuros >= 1_000_000
+        ? `${(volumeInEuros / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M€`
+        : euro(volumeInEuros)
+
+    return [
+      {
+        label: 'Volume de transactions',
+        value: formattedVolume,
+        hint: `${scoreboard.transactions.totalTransactions.toLocaleString('fr-FR')} transaction(s)`,
+      },
+      {
+        label: 'Partenaires actifs',
+        value: scoreboard.partners.validated.toLocaleString('fr-FR'),
+        hint: `Sur ${scoreboard.partners.total.toLocaleString('fr-FR')} partenaires au total`,
+      },
+      {
+        label: 'Salariés actifs',
+        value: scoreboard.employees.active.toLocaleString('fr-FR'),
+        hint: `Sur ${scoreboard.employees.total.toLocaleString('fr-FR')} salariés inscrits`,
+      },
+      {
+        label: 'Demandes en attente',
+        value: String(scoreboard.partners.pending),
+        hint: 'Partenaires en attente de validation',
+        warning: scoreboard.partners.pending > 0,
+      },
+    ]
+  }, [scoreboard])
+
+  const dynamicRegions = useMemo(() => {
+    if (!adminAccounts || adminAccounts.partners.length === 0) {
+      return []
+    }
+
+    const countsByRegion = adminAccounts.partners.reduce<Record<string, number>>(
+      (acc, partner) => {
+        const regionName =
+          (partner as unknown as { region?: string }).region || 'Non spécifiée'
+        acc[regionName] = (acc[regionName] || 0) + 1
+        return acc
+      },
+      {},
+    )
+
+    return Object.entries(countsByRegion)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [adminAccounts])
+
+  const maxRegion = useMemo(() => {
+    if (dynamicRegions.length === 0) return 1
+    return Math.max(...dynamicRegions.map((region) => region.count))
+  }, [dynamicRegions])
 
   const pendingPartners = useMemo(() => {
     if (!adminAccounts) return []
     return adminAccounts.partners.filter((p) => p.status === 'pending')
   }, [adminAccounts])
-
-  const maxRegion = Math.max(...regions.map((region) => region.count))
 
   const openDecision = (partnerId: string, kind: 'approve' | 'reject') => {
     setPendingDecision({ partnerId, kind })
@@ -182,7 +216,7 @@ function Admin() {
       )
       setPendingDecision(null)
       setDecisionReason('')
-      fetchAccounts()
+      fetchData()
     } catch (err) {
       setDecisionError(
         getApiError(err).message ?? "Échec lors de l'enregistrement de la décision.",
@@ -281,6 +315,7 @@ function Admin() {
         `Abondement de ${euro(numericAmount)} accordé avec succès à ${selectedCount} salarié(s).`,
       )
       setSelectedIds(new Set())
+      fetchData()
     } catch (err) {
       setSubsidyFeedback(
         getApiError(err).message ?? "Échec lors de l'attribution des crédits.",
@@ -299,7 +334,7 @@ function Admin() {
         <SimulationNotice />
 
         <dl className="kpi-grid">
-          {kpis.map((kpi) => (
+          {dynamicKpis.map((kpi) => (
             <div
               className={kpi.warning ? 'kpi-card kpi-card-warning' : 'kpi-card'}
               key={kpi.label}
@@ -323,26 +358,32 @@ function Admin() {
         >
           <div className="admin-regions-head">
             <h2 className="band-title" id="admin-regions-title">
-              Régions les plus actives
+              Provenances des partenaires actifs par région
             </h2>
           </div>
 
-          <ol className="admin-region-list">
-            {regions.map((region) => (
-              <li className="admin-region-row" key={region.name}>
-                <span className="admin-region-name">{region.name}</span>
-                <span className="admin-region-track">
-                  <span
-                    className="admin-region-bar"
-                    style={{ width: `${(region.count / maxRegion) * 100}%` }}
-                  />
-                </span>
-                <span className="admin-region-count">
-                  {region.count.toLocaleString('fr-FR')}
-                </span>
-              </li>
-            ))}
-          </ol>
+          {dynamicRegions.length === 0 ? (
+            <p className="admin-requests-empty">
+              Aucune donnée régionale disponible.
+            </p>
+          ) : (
+            <ol className="admin-region-list">
+              {dynamicRegions.map((region) => (
+                <li className="admin-region-row" key={region.name}>
+                  <span className="admin-region-name">{region.name}</span>
+                  <span className="admin-region-track">
+                    <span
+                      className="admin-region-bar"
+                      style={{ width: `${(region.count / maxRegion) * 100}%` }}
+                    />
+                  </span>
+                  <span className="admin-region-count">
+                    {region.count.toLocaleString('fr-FR')}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
       </div>
     )

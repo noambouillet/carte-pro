@@ -38,7 +38,7 @@ export interface PartnerMe {
     name: string;
     siren: string;
     objetSocial: string;
-    address: string;
+    region: string;
     email: string;
     status: "pending" | "validated" | "rejected";
   };

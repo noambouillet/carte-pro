@@ -13,6 +13,7 @@ export interface AdminAccountsResponse {
     id: string
     name: string | null
     email: string | null
+    region?: string | null
     status: 'pending' | 'validated' | 'rejected'
     createdAt: string
   }>

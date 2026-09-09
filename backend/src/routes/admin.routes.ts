@@ -28,6 +28,7 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
             id: partners.id,
             name: partners.name,
             email: partners.email,
+            region: partners.region,
             status: partners.status,
             createdAt: partners.createdAt,
           })
@@ -58,6 +59,7 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
               id: t.String(),
               name: t.Union([t.String(), t.Null()]),
               email: t.Union([t.String(), t.Null()]),
+              region: t.Optional(t.Union([t.String(), t.Null()])),
               status: partnerStatusEnum,
               createdAt: t.String(),
             })

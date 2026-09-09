@@ -107,7 +107,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
           occurredAt: transactionHistory.occurredAt,
           partnerId: transactionHistory.partnerId,
           partnerName: partners.name,
-          partnerAddress: partners.address,
+          partnerRegion: partners.region,
           qrCodeId: transactionHistory.qrCodeId,
           amountCents: transactionHistory.amountCents,
           status: transactionHistory.status,
@@ -134,7 +134,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
           occurredAt: row.occurredAt,
           partnerId: row.partnerId !== null ? String(row.partnerId) : null,
           partnerName: row.partnerName,
-          partnerAddress: row.partnerAddress,
+          partnerRegion: row.partnerRegion,
           qrCodeId: row.qrCodeId !== null ? String(row.qrCodeId) : null,
           amountCents: Number(row.amountCents),
           status: row.status,
@@ -157,7 +157,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
                 t.String(),
                 t.Null(),
               ]),
-              partnerAddress: t.Union([
+              partnerRegion: t.Union([
                 t.String(),
                 t.Null(),
               ]),
