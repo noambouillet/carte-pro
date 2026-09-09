@@ -460,26 +460,26 @@ function Partner() {
   }, [])
 
   useEffect(() => {
-      let cancelled = false
+    let cancelled = false
 
-      async function load() {
-        setLoading(true)
+    async function load() {
+      setLoading(true)
 
-        try {
-          await loadTransactions(period, periodOffset)
-        } finally {
-          if (!cancelled) {
-            setLoading(false)
-          }
+      try {
+        await loadTransactions(period, periodOffset)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
         }
       }
+    }
 
-      load()
+    load()
 
-      return () => {
-        cancelled = true
-      }
-    }, [loadTransactions, period, periodOffset])
+    return () => {
+      cancelled = true
+    }
+  }, [loadTransactions, period, periodOffset])
 
   const current = useMemo(() => {
     const now = shiftPeriod(
@@ -516,44 +516,56 @@ function Partner() {
   const maxValue = Math.max(1, ...current.bars.map((bar) => bar.value))
   const totalAmount = current.bars.reduce((sum, bar) => sum + bar.value, 0)
 
-  const handleQrScan = useCallback((value: string) => {
-    setCodeInput(value)
-    setShowScanner(false)
-    setReceipt('QR code reconnu. Vérifiez le montant avant de valider.')
-  }, [])
+  const handleProcessPayment = useCallback(
+    async (qrToken: string, rawAmount: string) => {
+      const normalizedAmount = Number(rawAmount.replace(',', '.'))
 
-  async function handleRedeem(event: FormEvent<HTMLFormElement>) {
+      if (!qrToken.trim() || !Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        setReceipt('Merci de renseigner un montant et une référence valides.')
+        return
+      }
+
+      setSubmitting(true)
+      setReceipt('')
+
+      try {
+        const { transaction } = await redeemQrCode({
+          qrToken: qrToken.trim(),
+          amountCents: Math.round(normalizedAmount * 100),
+          idempotencyKey: crypto.randomUUID(),
+        })
+
+        setReceipt(`Paiement de ${euro(transaction.amountCents / 100)} validé.`)
+        setAmountInput('')
+        setCodeInput('')
+
+        await loadTransactions(period, periodOffset)
+      } catch (caughtError) {
+        const { error: code } = getApiError(caughtError)
+
+        setReceipt(redeemErrorMessages[code] ?? 'Une erreur est survenue, veuillez réessayer.')
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [loadTransactions, period, periodOffset],
+  )
+
+  const handleQrScan = useCallback(
+    (scannedCode: string) => {
+      setShowScanner(false)
+
+      const userInput = window.prompt('Entrez le montant à encaisser (€) :')
+      if (userInput === null) return
+
+      handleProcessPayment(scannedCode, userInput)
+    },
+    [handleProcessPayment],
+  )
+
+  async function handleRedeem(event: FormEvent) {
     event.preventDefault()
-
-    const normalizedAmount = Number(amountInput.replace(',', '.'))
-
-    if (!codeInput.trim() || !Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-      setReceipt('Merci de renseigner un montant et une référence valides.')
-      return
-    }
-
-    setSubmitting(true)
-    setReceipt('')
-
-    try {
-      const { transaction } = await redeemQrCode({
-        qrToken: codeInput.trim(),
-        amountCents: Math.round(normalizedAmount * 100),
-        idempotencyKey: crypto.randomUUID(),
-      })
-
-      setReceipt(`Paiement de ${euro(transaction.amountCents / 100)} validé.`)
-      setAmountInput('')
-      setCodeInput('')
-
-      await loadTransactions(period, periodOffset)
-    } catch (caughtError) {
-      const { error: code } = getApiError(caughtError)
-
-      setReceipt(redeemErrorMessages[code] ?? 'Une erreur est survenue, veuillez réessayer.')
-    } finally {
-      setSubmitting(false)
-    }
+    await handleProcessPayment(codeInput, amountInput)
   }
 
   return (
@@ -743,13 +755,13 @@ function Partner() {
                 </h3>
 
                 <p>
-                  La caméra s'ouvre, le montant est
-                  confirmé à l'écran avant validation.
+                  La caméra s'ouvre, saisissez le montant pour valider l'encaissement.
                 </p>
 
                 <button
                   className="pay-primary"
                   type="button"
+                  disabled={submitting}
                   onClick={() => {
                     setReceipt('')
                     setShowScanner(true)
