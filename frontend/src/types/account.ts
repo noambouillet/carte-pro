@@ -3,7 +3,6 @@ export type AccountStatus = 'active' | 'suspended' | 'closed'
 
 export type Account = {
   name: string
-  code: string
   type: AccountType
   attachment: string
   status: AccountStatus

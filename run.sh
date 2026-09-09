@@ -1,6 +1,9 @@
 #!/bin/bash
 # Little script to start back/front/db
 
+EXPECTED_HASH="c9e04a6234bb8c4e97d2384843d7b9469f35da0f7d5c26b4cf4869bc72d89fdd"
+ACTUAL_HASH=$(sha256sum generate-certs.sh | awk '{print $1}')
+
 set -e
 
 cleanup() {
@@ -17,6 +20,15 @@ exit 0
 }
 
 trap cleanup SIGINT SIGTERM
+
+echo "Creating https certs..."
+
+if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
+    echo "The file generate-certs.sh has changed! Update the file's hash."
+    exit 1
+fi
+
+bash generate-certs.sh
 
 echo "Checking backend dependencies..."
 

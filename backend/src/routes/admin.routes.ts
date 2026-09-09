@@ -5,7 +5,7 @@ import { database } from "../config/database";
 import { authPlugin, requireAdmin } from "../middleware/auth";
 import { fetchTransactionHistoryCsv } from "../scripts/export";
 
-const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected")]);
+const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected"), t.Literal("archived")]);
 const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
 const errorSchema = t.Object({ error: t.String() });
 

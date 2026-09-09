@@ -1,98 +1,91 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { searchPartners, type PartnerDirectoryEntry } from '../api/Partners'
+import { getApiError } from '../api/Errors'
 import './Network.css'
-import { partners } from './partners'
 
 type NetworkProps = {
   establishment: string
 }
 
-function Network({ establishment }: NetworkProps) {
+function Network({ }: NetworkProps) {
+  const [partnersList, setPartnersList] = useState<PartnerDirectoryEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('toutes')
 
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
 
-  const others = useMemo(
-    () => partners.filter((partner) => partner.name !== establishment),
-    [establishment],
-  )
+    searchPartners(query)
+      .then((data) => {
+        if (!cancelled) {
+          setPartnersList(data.partners)
+          setError(null)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(getApiError(err).message ?? 'Impossible de charger les partenaires.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
 
-  const categories = useMemo(
-    () => [...new Set(others.map((partner) => partner.category))].sort(),
-    [others],
-  )
-
-  const results = useMemo(() => {
-    const search = query.trim().toLowerCase()
-
-    return others.filter((partner) => {
-      const matchCategory =
-        category === 'toutes' || partner.category === category
-      const matchSearch =
-        search === '' ||
-        partner.name.toLowerCase().includes(search) ||
-        partner.city.toLowerCase().includes(search)
-
-      return matchCategory && matchSearch
-    })
-  }, [others, query, category])
+    return () => {
+      cancelled = true
+    }
+  }, [query])
 
   return (
     <div className="dash-inner dash-body">
       <h1 className="dash-title">Réseau des partenaires</h1>
       <p className="dash-subtitle">
-        Consultez les établissements référencés. Les
-        commerçants du réseau acceptent tous le paiement Carte Pro.
+        Consultez les établissements référencés. Les commerçants du réseau acceptent tous le paiement Carte Pro.
       </p>
 
       <div className="filters">
         <div className="filter-field">
-          <label htmlFor="search">Rechercher un établissement ou une ville</label>
+          <label htmlFor="search">Rechercher un établissement ou une adresse</label>
           <input
             id="search"
             type="search"
             value={query}
-            placeholder="Exemple : librairie, Nantes"
+            placeholder="Exemple : Boulangerie, Rue de Paris"
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-
-        <div className="filter-field filter-field-narrow">
-          <label htmlFor="category">Catégorie</label>
-          <select
-            id="category"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-          >
-            <option value="toutes">Toutes les catégories</option>
-            {categories.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
-      <p className="filter-count" role="status">
-        {results.length} établissement{results.length > 1 ? 's' : ''} sur{' '}
-        {others.length}
-      </p>
-
-      {results.length === 0 ? (
-        <p className="filter-empty">
-          Aucun établissement ne correspond à cette recherche.
-        </p>
+      {loading ? (
+        <p>Chargement des partenaires…</p>
+      ) : error ? (
+        <p role="alert">{error}</p>
       ) : (
-        <ul className="partner-grid">
-          {results.map((partner) => (
-            <li className="partner-card" key={partner.name}>
-              <span className="partner-category">{partner.category}</span>
-              <h2>{partner.name}</h2>
-              <p>{partner.city}</p>
-              <p className="partner-since">Référencé depuis le {partner.since}</p>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="filter-count" role="status">
+            {partnersList.length} établissement{partnersList.length > 1 ? 's' : ''} trouvé{partnersList.length > 1 ? 's' : ''}
+          </p>
+
+          {partnersList.length === 0 ? (
+            <p className="filter-empty">
+              Aucun établissement trouvé.
+            </p>
+          ) : (
+            <ul className="partner-grid">
+              {partnersList.map((partner) => (
+                <li className="partner-card" key={partner.id}>
+                  <h2>{partner.name}</h2>
+                  <p>{partner.address}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   )

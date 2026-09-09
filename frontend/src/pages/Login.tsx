@@ -103,7 +103,7 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
       </form>
 
       <p className="legal">
-        En continuant, vous acceptez les conditions générales d&apos;utilisation.
+        En continuant, vous acceptez les conditions générales d'utilisation.
       </p>
 
       {showPartnerNotValidated && (

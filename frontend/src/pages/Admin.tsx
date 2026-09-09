@@ -1,10 +1,12 @@
 import './Admin.css'
 import './Employee.css'
 import './Partner.css'
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Account, AccountType } from '../types/account'
 import { Amount, SimulationNotice } from '../components/Simulation'
 import type { ReferralRequest } from '../types/referral'
+import { getAdminAccounts, grantCredit, type AdminAccountsResponse } from '../api/Admin'
+import { getApiError } from '../api/Errors'
 
 type Kpi = {
   label: string
@@ -81,42 +83,36 @@ const referralRequests: ReferralRequest[] = [
 const accounts: Account[] = [
   {
     name: 'Le Comptoir du Midi',
-    code: 'PAR-2210-4417',
     type: 'partner',
     attachment: 'Restauration',
     status: 'active',
   },
   {
     name: 'Sport Loisirs Aubagne',
-    code: 'PAR-3390-1188',
     type: 'partner',
     attachment: 'Sport',
     status: 'suspended',
   },
   {
     name: 'Pharmacie du Parc',
-    code: 'PAR-4471-9903',
     type: 'partner',
     attachment: 'Santé',
     status: 'active',
   },
   {
     name: 'Épicerie Sainte-Claire',
-    code: 'PAR-5512-3067',
     type: 'partner',
     attachment: 'Alimentation',
     status: 'active',
   },
   {
     name: 'Librairie Vasseur',
-    code: 'PAR-6640-2214',
     type: 'partner',
     attachment: 'Culture',
     status: 'active',
   },
   {
     name: 'Transports Régionaux Unifiés',
-    code: 'PAR-7789-4456',
     type: 'partner',
     attachment: 'Mobilité',
     status: 'active',
@@ -133,23 +129,6 @@ const accountStatusLabels: Record<Account['status'], string> = {
   suspended: 'Suspendu',
   closed: 'Clôturé',
 }
-
-type SubsidyEmployee = {
-  name: string
-  identifier: string
-  balance: number
-}
-
-
-
-const subsidyEmployees: SubsidyEmployee[] = [
-  { name: 'Camille Ferrand', identifier: 'VAL-004471', balance: 168.4 },
-  { name: 'Yanis Prunier', identifier: 'VAL-004472', balance: 94.1 },
-  { name: 'Hélène Marchetti', identifier: 'VAL-004473', balance: 212.75 },
-  { name: 'Abdel Rahmani', identifier: 'VAL-004474', balance: 36 },
-  { name: 'Léa Vasseur', identifier: 'VAL-004475', balance: 128.6 },
-  { name: 'Thomas Guérin', identifier: 'VAL-004476', balance: 77.25 },
-]
 
 const euro = (amount: number) =>
   `${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`
@@ -170,12 +149,35 @@ function Admin() {
   const [accountFilter, setAccountFilter] = useState<'all' | AccountType>('all')
   const [accountQuery, setAccountQuery] = useState('')
 
+  const [employeesApiList, setEmployeesApiList] = useState<AdminAccountsResponse['employees']>([])
+  const [employeesLoading, setEmployeesLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setEmployeesLoading(true)
+    getAdminAccounts()
+      .then((data) => {
+        if (!cancelled) {
+          setEmployeesApiList(data.employees)
+        }
+      })
+      .catch((err) => {
+        console.error('Erreur chargement salariés:', getApiError(err).message)
+      })
+      .finally(() => {
+        if (!cancelled) setEmployeesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const maxRegion = Math.max(...regions.map((region) => region.count))
 
   const decideRequest = (siren: string) => {
     setRequests((current) => current.filter((request) => request.siren !== siren))
   }
-
 
   const [pendingDecision, setPendingDecision] = useState<
     { siren: string; kind: 'approve' | 'reject' } | null
@@ -199,11 +201,10 @@ function Admin() {
     setDecisionReason('')
   }
 
-
-  const setAccountStatus = (code: string, status: Account['status']) => {
+  const setAccountStatus = (name: string, status: Account['status']) => {
     setAccountList((current) =>
       current.map((account) =>
-        account.code === code ? { ...account, status } : account,
+        account.name === name ? { ...account, status } : account,
       ),
     )
   }
@@ -216,7 +217,6 @@ function Admin() {
       const matchesSearch =
         search === '' ||
         account.name.toLowerCase().includes(search) ||
-        account.code.toLowerCase().includes(search) ||
         account.attachment.toLowerCase().includes(search)
 
       return matchesType && matchesSearch
@@ -225,33 +225,40 @@ function Admin() {
 
   const [amountPerEmployee, setAmountPerEmployee] = useState<number | ''>('')
   const [valueDate, setValueDate] = useState('2026-09-01')
-  const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
-    () => new Set(),
-  )
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [subsidyFeedback, setSubsidyFeedback] = useState('')
+  const [subsidySubmitting, setSubsidySubmitting] = useState(false)
   const [employeeQuery, setEmployeeQuery] = useState('')
 
-  const selectedCount = selectedIdentifiers.size
+  const selectedCount = selectedIds.size
   const numericAmount = amountPerEmployee === '' ? 0 : amountPerEmployee
+
+  const subsidyEmployees = useMemo(() => {
+    return employeesApiList.map((emp) => ({
+      id: Number(emp.id),
+      name: `${emp.firstName} ${emp.lastName}`,
+      email: emp.email,
+    }))
+  }, [employeesApiList])
 
   const visibleSubsidyEmployees = useMemo(() => {
     const search = employeeQuery.trim().toLowerCase()
 
     return subsidyEmployees.filter(
-      (subsidyEmployee) =>
+      (emp) =>
         search === '' ||
-        subsidyEmployee.name.toLowerCase().includes(search) ||
-        subsidyEmployee.identifier.toLowerCase().includes(search),
+        emp.name.toLowerCase().includes(search) ||
+        emp.email.toLowerCase().includes(search),
     )
-  }, [employeeQuery])
+  }, [subsidyEmployees, employeeQuery])
 
-  const toggleEmployee = (identifier: string) => {
-    setSelectedIdentifiers((current) => {
+  const toggleEmployee = (id: number) => {
+    setSelectedIds((current) => {
       const next = new Set(current)
-      if (next.has(identifier)) {
-        next.delete(identifier)
+      if (next.has(id)) {
+        next.delete(id)
       } else {
-        next.add(identifier)
+        next.add(id)
       }
       return next
     })
@@ -259,11 +266,35 @@ function Admin() {
 
   const toggleSelectAll = () => {
     if (selectedCount === 0) {
-      setSelectedIdentifiers(
-        new Set(subsidyEmployees.map((subsidyEmployee) => subsidyEmployee.identifier)),
-      )
+      setSelectedIds(new Set(subsidyEmployees.map((emp) => emp.id)))
     } else {
-      setSelectedIdentifiers(new Set())
+      setSelectedIds(new Set())
+    }
+  }
+
+  const handleGrantCredits = async () => {
+    if (selectedCount === 0 || numericAmount <= 0) return
+
+    setSubsidySubmitting(true)
+    setSubsidyFeedback('')
+    const amountCents = Math.round(numericAmount * 100)
+
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((employeeId) =>
+          grantCredit(employeeId, amountCents),
+        ),
+      )
+      setSubsidyFeedback(
+        `Abondement de ${euro(numericAmount)} accordé avec succès à ${selectedCount} salarié(s).`,
+      )
+      setSelectedIds(new Set())
+    } catch (err) {
+      setSubsidyFeedback(
+        getApiError(err).message ?? "Échec lors de l'attribution des crédits.",
+      )
+    } finally {
+      setSubsidySubmitting(false)
     }
   }
 
@@ -522,10 +553,9 @@ function Admin() {
             </thead>
             <tbody>
               {visibleAccounts.map((account) => (
-                <tr key={account.code}>
+                <tr key={account.name}>
                   <td>
                     <span className="history-partner">{account.name}</span>
-                    <span className="history-city">{account.code}</span>
                   </td>
                   <td>{accountTypeLabels[account.type]}</td>
                   <td>{account.attachment}</td>
@@ -548,7 +578,7 @@ function Admin() {
                         className="admin-action"
                         type="button"
                         disabled={account.status === 'active'}
-                        onClick={() => setAccountStatus(account.code, 'active')}
+                        onClick={() => setAccountStatus(account.name, 'active')}
                       >
                         Activer
                       </button>
@@ -557,7 +587,7 @@ function Admin() {
                         type="button"
                         disabled={account.status === 'suspended'}
                         onClick={() =>
-                          setAccountStatus(account.code, 'suspended')
+                          setAccountStatus(account.name, 'suspended')
                         }
                       >
                         Suspendre
@@ -566,7 +596,7 @@ function Admin() {
                         className="admin-reject"
                         type="button"
                         disabled={account.status === 'closed'}
-                        onClick={() => setAccountStatus(account.code, 'closed')}
+                        onClick={() => setAccountStatus(account.name, 'closed')}
                       >
                         Clôturer
                       </button>
@@ -599,19 +629,19 @@ function Admin() {
         <div className="admin-subsidy-grid">
           <div className="pay-card admin-subsidy-form">
             <div className="pay-field">
-              <label htmlFor="subsidy-search">Salariés</label>
+              <label htmlFor="subsidy-search">Filtrer la liste</label>
               <input
                 id="subsidy-search"
                 type="search"
                 value={employeeQuery}
                 onChange={(event) => setEmployeeQuery(event.target.value)}
-                placeholder="Rechercher un salarié ou un identifiant"
+                placeholder="Rechercher par nom ou email"
               />
             </div>
 
             <div className="pay-field">
               <label htmlFor="subsidy-amount">
-                Montant par salarié{' '}
+                Montant par salarié (€){' '}
                 <span className="required" aria-hidden="true">
                   *
                 </span>
@@ -624,8 +654,6 @@ function Admin() {
                 value={amountPerEmployee}
                 placeholder="Exemple : 120"
                 onChange={(event) => {
-                  // Un input number laisse encore passer "e", "+" ou "-" :
-                  // on filtre nous-memes pour ne garder que des chiffres.
                   const digitsOnly = event.target.value.replace(/\D/g, '')
                   setAmountPerEmployee(digitsOnly === '' ? '' : Number(digitsOnly))
                 }}
@@ -646,18 +674,18 @@ function Admin() {
               <button
                 className="pay-primary"
                 type="button"
-                disabled={selectedCount === 0 || numericAmount === 0}
-                onClick={() =>
-                  setSubsidyFeedback('Abondement enregistré (démonstration).')
-                }
+                disabled={selectedCount === 0 || numericAmount === 0 || subsidySubmitting}
+                onClick={handleGrantCredits}
               >
-                Créditer les comptes
+                {subsidySubmitting ? 'Enregistrement…' : 'Créditer les comptes'}
               </button>
             </div>
 
-            <p className="pay-receipt" role="status">
-              {subsidyFeedback}
-            </p>
+            {subsidyFeedback && (
+              <p className="pay-receipt" role="status">
+                {subsidyFeedback}
+              </p>
+            )}
           </div>
 
           <div
@@ -666,56 +694,43 @@ function Admin() {
           >
             <div className="admin-subsidy-employees-head">
               <h2 id="subsidy-employees-title">Salariés</h2>
-              <button className="band-link" type="button">
-                Importer un fichier CSV
-              </button>
             </div>
 
-            <table className="history-table admin-subsidy-table">
-              <thead>
-                <tr>
-                  <th scope="col" aria-label="Sélection">
-                  </th>
-                  <th scope="col">Salarié</th>
-                  <th scope="col">Identifiant</th>
-                  <th scope="col" className="cell-amount">
-                    Solde actuel
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleSubsidyEmployees.map((subsidyEmployee) => (
-                  <tr key={subsidyEmployee.identifier}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIdentifiers.has(subsidyEmployee.identifier)}
-                        onChange={() => toggleEmployee(subsidyEmployee.identifier)}
-                        aria-label={`Inclure ${subsidyEmployee.name}`}
-                      />
-                    </td>
-                    <td className="history-partner">{subsidyEmployee.name}</td>
-                    <td className="admin-subsidy-identifier">
-                      {subsidyEmployee.identifier}
-                    </td>
-                    <td className="cell-amount">
-                      <Amount showLabel={false}>{euro(subsidyEmployee.balance)}</Amount>
-                    </td>
+            {employeesLoading ? (
+              <p>Chargement des salariés…</p>
+            ) : (
+              <table className="history-table admin-subsidy-table">
+                <thead>
+                  <tr>
+                    <th scope="col" aria-label="Sélection"></th>
+                    <th scope="col">Salarié</th>
+                    <th scope="col">Email</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {visibleSubsidyEmployees.map((emp) => (
+                    <tr key={emp.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(emp.id)}
+                          onChange={() => toggleEmployee(emp.id)}
+                          aria-label={`Inclure ${emp.name}`}
+                        />
+                      </td>
+                      <td className="history-partner">{emp.name}</td>
+                      <td className="admin-subsidy-identifier">{emp.email}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
 
-            {visibleSubsidyEmployees.length === 0 && (
+            {!employeesLoading && visibleSubsidyEmployees.length === 0 && (
               <p className="admin-requests-empty">
                 Aucun salarié ne correspond à cette recherche.
               </p>
             )}
-
-            <p className="chart-note">
-              <span className="sim-mark">*</span> Soldes fictifs, aucune
-              valeur réelle.
-            </p>
 
             <div className="admin-subsidy-employees-footer">
               <span>

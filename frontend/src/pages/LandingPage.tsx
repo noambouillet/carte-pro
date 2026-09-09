@@ -60,7 +60,7 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
           <span className="badge">Dispositif national</span>
 
           <h1 className="home-title">
-            Les avantages salariés, crédités par l&apos;employeur et dépensés
+            Les avantages salariés, crédités par l'employeur et dépensés
             chez les commerçants du réseau.
           </h1>
 
@@ -102,7 +102,7 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
 
         <aside className="home-aside" aria-labelledby="audience-title">
           <h2 className="aside-title" id="audience-title">
-            À qui s&apos;adresse Carte Pro
+            À qui s'adresse Carte Pro
           </h2>
 
           <div className="aside-block">

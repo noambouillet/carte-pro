@@ -145,7 +145,7 @@ function Employee() {
           <SimulationNotice />
           <p className="dash-subtitle">
             Présentez ce code au commerçant. Il reste valable 5 minutes et ne peut
-            servir qu&apos;une seule fois.
+            servir qu'une seule fois.
           </p>
 
           <div className="qr-card">
@@ -190,7 +190,7 @@ function Employee() {
             <h2 id="pay-title">Payer chez un partenaire</h2>
             <p className="pay-intro">
               Présentez le QR code au commerçant. Il reste valable 5 minutes et ne
-              peut servir qu&apos;une seule fois.
+              peut servir qu'une seule fois.
             </p>
 
             {qrError && <p role="alert">{qrError}</p>}
@@ -296,7 +296,7 @@ function Employee() {
                     type="button"
                     onClick={() => setShowAll(true)}
                   >
-                    voir tout l&apos;historique
+                    voir tout l'historique
                   </button>
                 </>
               )}
