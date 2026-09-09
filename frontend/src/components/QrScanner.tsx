@@ -19,8 +19,10 @@ function QrScanner({ onScan, onClose }: QrScannerProps) {
   useEffect(() => {
     const video = videoRef.current
 
-    if (!video)
+    if (video === null)
       return
+
+    const videoElement: HTMLVideoElement = video
     const reader = new BrowserMultiFormatReader()
 
     readerRef.current = reader
@@ -45,7 +47,7 @@ function QrScanner({ onScan, onClose }: QrScannerProps) {
               facingMode: { ideal: 'environment' },
             },
           },
-          video,
+          videoElement,
           (result) => {
             if (!result || scannedRef.current)
               return
