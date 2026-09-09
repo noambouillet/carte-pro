@@ -5,7 +5,10 @@ import './Employee.css'
 import './Partner.css'
 import Network from './Network'
 
-import { getEmployeeBalance, getEmployeeTransactions, generateEmployeeQrCode, type EmployeeTransaction } from '../api/Employee'
+import {
+  getEmployeeBalance, getEmployeeTransactions, generateEmployeeQrCode,
+  saveEmployeeBalance, getCachedEmployeeBalance, type EmployeeTransaction
+} from '../api/Employee'
 import { getMe, type EmployeeMe } from '../api/Auth'
 import { getApiError } from '../api/Errors'
 
@@ -25,6 +28,8 @@ function Employee() {
   const [transactions, setTransactions] = useState<EmployeeTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [degradedMode, setDegradedMode] = useState(false)
+  const [cachedAt, setCachedAt] = useState<string | null>(null)
 
   const [showQr, setShowQr] = useState(false)
   const [qrToken, setQrToken] = useState<string | null>(null)
@@ -38,27 +43,57 @@ function Employee() {
   useEffect(() => {
     let cancelled = false
 
-    Promise.all([getMe(), getEmployeeBalance(), getEmployeeTransactions()])
-      .then(([me, balance, tx]) => {
+    const load = async () => {
+      try {
+        const me = await getMe()
+
         if (cancelled)
           return
         if (me.role !== 'employee') {
           setError('Compte non employé.')
           return
         }
-        setProfile(me.employee)
-        setBalanceCents(balance.balanceCents)
-        setTransactions(tx.transactions)
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setError(getApiError(err).message ?? 'Impossible de charger vos données.')
-      })
-      .finally(() => {
-        if (!cancelled)
-          setLoading(false)
-      })
 
+        setProfile(me.employee)
+        try {
+          const balance = await getEmployeeBalance()
+
+          if (!cancelled) {
+            setBalanceCents(balance.balanceCents)
+            saveEmployeeBalance(balance.balanceCents)
+          }
+        } catch {
+          const cached = getCachedEmployeeBalance()
+
+          if (cached && !cancelled) {
+            setBalanceCents(cached.balanceCents)
+            setDegradedMode(true)
+            setCachedAt(cached.cachedAt)
+          } else if (!cancelled) {
+            setError('Impossible de charger votre solde.')
+          }
+        }
+
+        try {
+          const transaction = await getEmployeeTransactions()
+
+          if (!cancelled) {
+            setTransactions(transaction.transactions)
+          }
+        } catch {
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(getApiError(err).message ?? 'Impossible de charger vos données.')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    load()
     return () => {
       cancelled = true
     }
@@ -175,6 +210,15 @@ function Employee() {
           Bonjour {profile ? `${profile.firstName} ${profile.lastName}` : ''}
         </h1>
         <SimulationNotice />
+        {degradedMode && (
+          <div className="offline-notice" role="status">
+            <strong>Mode dégradé</strong>
+            <span>
+              Solde affiché depuis la dernière synchronisation
+              {cachedAt ? ` du ${new Date(cachedAt).toLocaleString('fr-FR')}` : ''}.
+            </span>
+          </div>
+        )}
 
         <div className="dash-grid">
           <section className="balance-card" aria-labelledby="balance-title">
@@ -198,9 +242,9 @@ function Employee() {
               className="pay-primary"
               type="button"
               onClick={handleGenerateQr}
-              disabled={qrLoading}
+              disabled={qrLoading || degradedMode}
             >
-              {qrLoading ? 'Génération…' : 'Générer mon QR code de paiement'}
+              {qrLoading ? 'Génération…' : degradedMode ? 'Paiement indisponible hors connexion' : 'Générer mon QR code de paiement'}
             </button>
           </aside>
         </div>
