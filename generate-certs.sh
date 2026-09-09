@@ -21,12 +21,20 @@ fi
 
 mkcert -install
 
-if command -v ipconfig >/dev/null 2>&1; then
-  LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
-elif command -v hostname >/dev/null 2>&1; then
-  LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+if [[ -n "${CI:-}" ]]; then
+  LAN_IP="127.0.0.1"
 else
-  LAN_IP=""
+  if command -v ipconfig >/dev/null 2>&1; then
+    LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
+  elif command -v hostname >/dev/null 2>&1; then
+    LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  else
+    LAN_IP=""
+  fi
+
+  if [[ -z "${LAN_IP:-}" ]]; then
+    read -r -p "Enter your LAN IP address: " LAN_IP
+  fi
 fi
 
 if [[ -z "${LAN_IP:-}" ]]; then
