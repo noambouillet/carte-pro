@@ -48,11 +48,31 @@
 }
 
 .segment-active {
-  /* The selected segment stands out with a double stroke, not a fill. */
   border: 2px solid var(--primary);
   background: var(--primary-tint);
   color: var(--primary);
   font-weight: 700;
+}
+
+.period-navigation {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.period-nav-button {
+  min-width: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--primary);
+  background: #fff;
+  color: var(--primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.period-nav-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .kpi-grid {
@@ -253,9 +273,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-  /* Same side margin as the shared.css containers. This rule lives here
-     because the base .dash-tabs rule does too: a stylesheet loaded later
-     would override the media query, since specificity is equal. */
   .dash-tabs {
       padding-left: 24px;
       padding-right: 24px;

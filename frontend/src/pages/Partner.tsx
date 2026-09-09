@@ -620,6 +620,15 @@ function Partner() {
                   ← Précédent
                 </button>
 
+                <button
+                  type="button"
+                  className="period-nav-button"
+                  disabled={periodOffset === 0}
+                  onClick={() => setPeriodOffset((offset) => Math.min(offset + 1, 0))}
+                >
+                  Suivant →
+                </button>
+
                 {periodOffset !== 0 && (
                   <button
                     type="button"
