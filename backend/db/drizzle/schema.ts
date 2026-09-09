@@ -15,7 +15,7 @@ export const employeeStatus = pgEnum("employee_status", ["active", "inactive"]);
 
 export const partnerDecision = pgEnum("partner_decision", ["approved", "rejected"]);
 
-export const partnerStatus = pgEnum("partner_status", ["pending", "validated", "rejected"]);
+export const partnerStatus = pgEnum("partner_status", ["pending", "validated", "rejected", "archived"]);
 
 export const transactionAttemptStatus = pgEnum("transaction_attempt_status", ["refused_insufficient_balance"]);
 

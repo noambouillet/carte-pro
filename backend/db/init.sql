@@ -208,26 +208,27 @@ BEGIN
         RETURN;
     END IF;
 
-    SELECT status INTO v_attempt_status
-    FROM transaction_attempts
-    WHERE partner_id = p_partner_id AND idempotency_key = p_idempotency_key;
+    SELECT ta.status INTO v_attempt_status FROM transaction_attempts
+    AS ta WHERE ta.partner_id = p_partner_id AND ta.idempotency_key = p_idempotency_key;
 
     IF FOUND THEN
         RETURN QUERY SELECT NULL::BIGINT, v_attempt_status::TEXT;
         RETURN;
     END IF;
 
-    PERFORM 1 FROM employees WHERE id = p_employee_id AND status = 'active';
+    PERFORM 1 FROM employees AS e WHERE e.id = p_employee_id AND e.status = 'active';
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'employee does not exist or is inactive';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM partners WHERE id = p_partner_id AND status = 'validated') THEN
+    IF NOT EXISTS (SELECT 1 FROM partners AS p WHERE p.id = p_partner_id AND p.status = 'validated') THEN
         RAISE EXCEPTION 'partner is not validated';
     END IF;
 
-    PERFORM 1 FROM qr_codes WHERE id = p_qr_code_id AND employee_id = p_employee_id AND used_at IS NULL AND now() < expires_at FOR UPDATE;
+    PERFORM 1 FROM qr_codes AS q WHERE q.id = p_qr_code_id
+        AND q.employee_id = p_employee_id AND q.used_at IS NULL
+        AND now() < q.expires_at FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'invalid or expired QR code';
     END IF;

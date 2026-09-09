@@ -5,7 +5,7 @@ import { partners, qrCodes, transactions } from "../../db/drizzle/schema";
 import { authPlugin, requireValidatedPartner, hashPassword } from "../middleware/auth";
 import { qrJwtPlugin } from "../middleware/qr";
 
-const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected")]);
+const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected"), t.Literal("archived")]);
 const errorSchema = t.Object({ error: t.String() });
 
 export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
@@ -233,6 +233,12 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
           throw new Error("process_payment returned no row");
         outcome = row;
       } catch (error: any) {
+        console.error("process_payment failed:", error);
+        console.error("message:", error?.message);
+        console.error("cause:", error?.cause);
+        console.error("detail:", error?.detail);
+        console.error("code:", error?.code);
+
         const message = String(error?.message ?? "");
         if (message.includes("inactive") || message.includes("does not exist")) {
           set.status = 403;

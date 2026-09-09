@@ -6,7 +6,7 @@ import { authPlugin, AUTH_COOKIE, issueSession, clearSession, verifyPassword, re
 
 const roleEnum = t.Union([t.Literal("employee"), t.Literal("partner"), t.Literal("admin")]);
 const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
-const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected")]);
+const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected"), t.Literal("archived")]);
 
 const errorSchema = t.Object({ error: t.String() });
 
