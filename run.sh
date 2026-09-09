@@ -1,7 +1,7 @@
 #!/bin/bash
 # Little script to start back/front/db
 
-EXPECTED_HASH="c9e04a6234bb8c4e97d2384843d7b9469f35da0f7d5c26b4cf4869bc72d89fdd"
+EXPECTED_HASH="babf20660be9fa16de5b31e5d36a337421423fac38935b83c60bae4761c07950"
 ACTUAL_HASH=$(sha256sum generate-certs.sh | awk '{print $1}')
 
 set -e
