@@ -27,7 +27,7 @@ type ManagedAccount = {
   name: string
   type: AccountType
   attachment: string
-  status: 'active' | 'suspended'
+  status: 'active' | 'suspended' | 'archived'
 }
 
 const accountTypeLabels: Record<AccountType, string> = {
@@ -38,6 +38,7 @@ const accountTypeLabels: Record<AccountType, string> = {
 const accountStatusLabels: Record<ManagedAccount['status'], string> = {
   active: 'Actif',
   suspended: 'Suspendu',
+  archived: 'Clôturé',
 }
 
 const euro = (amount: number) =>
@@ -161,21 +162,37 @@ function Admin() {
   const unifiedAccountsList = useMemo<ManagedAccount[]>(() => {
     if (!adminAccounts) return []
 
-    const empAccounts: ManagedAccount[] = adminAccounts.employees.map((emp) => ({
-      id: emp.id,
-      name: `${emp.firstName} ${emp.lastName}`,
-      type: 'employee',
-      attachment: emp.email,
-      status: emp.status === 'active' ? 'active' : 'suspended',
-    }))
+    const empAccounts: ManagedAccount[] = adminAccounts.employees.map((emp) => {
+      const rawStatus = (emp.status as string)
+      return {
+        id: emp.id,
+        name: `${emp.firstName} ${emp.lastName}`,
+        type: 'employee',
+        attachment: emp.email,
+        status:
+          rawStatus === 'archived' || rawStatus === 'closed' || rawStatus === 'inactive'
+            ? 'archived'
+            : rawStatus === 'active'
+              ? 'active'
+              : 'suspended',
+      }
+    })
 
-    const partnerAccounts: ManagedAccount[] = adminAccounts.partners.map((partner) => ({
-      id: partner.id,
-      name: partner.name || 'Partenaire inconnu',
-      type: 'partner',
-      attachment: partner.email || 'Non renseigné',
-      status: partner.status === 'validated' ? 'active' : 'suspended',
-    }))
+    const partnerAccounts: ManagedAccount[] = adminAccounts.partners.map((partner) => {
+      const rawStatus = (partner.status as string)
+      return {
+        id: partner.id,
+        name: partner.name || 'Partenaire inconnu',
+        type: 'partner',
+        attachment: partner.email || 'Non renseigné',
+        status:
+          rawStatus === 'archived' || rawStatus === 'closed' || rawStatus === 'rejected'
+            ? 'archived'
+            : rawStatus === 'validated' || rawStatus === 'active'
+              ? 'active'
+              : 'suspended',
+      }
+    })
 
     return [...empAccounts, ...partnerAccounts]
   }, [adminAccounts])
@@ -184,13 +201,14 @@ function Admin() {
     const search = accountQuery.trim().toLowerCase()
 
     return unifiedAccountsList.filter((account) => {
+      const isNotArchived = account.status !== 'archived'
       const matchesType = accountFilter === 'all' || account.type === accountFilter
       const matchesSearch =
         search === '' ||
         account.name.toLowerCase().includes(search) ||
         account.attachment.toLowerCase().includes(search)
 
-      return matchesType && matchesSearch
+      return isNotArchived && matchesType && matchesSearch
     })
   }, [unifiedAccountsList, accountFilter, accountQuery])
 
@@ -236,7 +254,9 @@ function Admin() {
   ) => {
     setUpdatingAccountId(account.id)
     try {
-      await updateAccountStatus(account.id, account.type, nextStatus)
+      const apiStatus = nextStatus === 'archived' ? 'closed' : nextStatus
+
+      await updateAccountStatus(account.id, account.type, apiStatus)
       fetchData()
     } catch (err) {
       console.error("Échec du changement de statut:", getApiError(err).message)
@@ -600,54 +620,81 @@ function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {visibleAccounts.map((account) => (
-                  <tr key={`${account.type}-${account.id}`}>
-                    <td>
-                      <span className="history-partner">{account.name}</span>
-                    </td>
-                    <td>{accountTypeLabels[account.type]}</td>
-                    <td>{account.attachment}</td>
-                    <td>
-                      <span
-                        className={
-                          account.status === 'active'
-                            ? 'status-badge'
-                            : account.status === 'suspended'
-                              ? 'status-badge status-badge-warning'
-                              : 'status-badge status-badge-danger'
-                        }
-                      >
-                        {accountStatusLabels[account.status]}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-requests-actions">
-                        <button
-                          className="admin-action"
-                          type="button"
-                          disabled={
-                            account.status === 'active' ||
-                            updatingAccountId === account.id
+                {visibleAccounts.map((account) => {
+                  const isClosed = account.status === 'archived'
+
+                  return (
+                    <tr key={`${account.type}-${account.id}`}>
+                      <td>
+                        <span className="history-partner">{account.name}</span>
+                      </td>
+                      <td>{accountTypeLabels[account.type]}</td>
+                      <td>{account.attachment}</td>
+                      <td>
+                        <span
+                          className={
+                            account.status === 'active'
+                              ? 'status-badge'
+                              : account.status === 'suspended'
+                                ? 'status-badge status-badge-warning'
+                                : 'status-badge status-badge-danger'
                           }
-                          onClick={() => handleUpdateStatus(account, 'active')}
                         >
-                          Activer
-                        </button>
-                        <button
-                          className="admin-action-warning"
-                          type="button"
-                          disabled={
-                            account.status === 'suspended' ||
-                            updatingAccountId === account.id
-                          }
-                          onClick={() => handleUpdateStatus(account, 'suspended')}
-                        >
-                          Suspendre
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {accountStatusLabels[account.status]}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-requests-actions">
+                          <button
+                            className="admin-action"
+                            type="button"
+                            disabled={
+                              account.status === 'active' ||
+                              isClosed ||
+                              updatingAccountId === account.id
+                            }
+                            onClick={() => handleUpdateStatus(account, 'active')}
+                          >
+                            Activer
+                          </button>
+
+                          <button
+                            className="admin-action-warning"
+                            type="button"
+                            disabled={
+                              account.status === 'suspended' ||
+                              isClosed ||
+                              updatingAccountId === account.id
+                            }
+                            onClick={() => handleUpdateStatus(account, 'suspended')}
+                          >
+                            Suspendre
+                          </button>
+
+                          <button
+                            className="admin-reject"
+                            type="button"
+                            disabled={
+                              isClosed ||
+                              updatingAccountId === account.id
+                            }
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Êtes-vous sûr de vouloir clôturer définitivement le compte de ${account.name} ? Cette action est irréversible.`,
+                                )
+                              ) {
+                                handleUpdateStatus(account, 'archived')
+                              }
+                            }}
+                          >
+                            Clôturer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}

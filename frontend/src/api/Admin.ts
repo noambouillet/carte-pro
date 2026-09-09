@@ -6,7 +6,7 @@ export interface AdminAccountsResponse {
     firstName: string
     lastName: string
     email: string
-    status: 'active' | 'inactive'
+    status: 'active' | 'inactive' | 'suspended' | 'archived'
     createdAt: string
   }>
   partners: Array<{
@@ -14,7 +14,7 @@ export interface AdminAccountsResponse {
     name: string | null
     email: string | null
     region?: string | null
-    status: 'pending' | 'validated' | 'rejected'
+    status: 'pending' | 'validated' | 'rejected' | 'archived'
     createdAt: string
   }>
 }
