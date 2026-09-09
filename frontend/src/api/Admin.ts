@@ -41,6 +41,18 @@ export async function getScoreboard(): Promise<ScoreboardResponse> {
   return data
 }
 
+export async function updateAccountStatus(
+  id: string,
+  type: 'employee' | 'partner',
+  status: 'active' | 'suspended' | 'closed',
+): Promise<{ account: { id: string; type: string; status: string } }> {
+  const { data } = await api.patch(`/admin/accounts/${id}/status`, {
+    type,
+    status,
+  })
+  return data
+}
+
 export async function validatePartner(
   id: string,
   decision: 'approved' | 'rejected',

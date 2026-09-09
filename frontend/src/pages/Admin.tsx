@@ -2,12 +2,13 @@ import './Admin.css'
 import './Employee.css'
 import './Partner.css'
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Account, AccountType } from '../types/account'
+import type { AccountType } from '../types/account'
 import { Amount, SimulationNotice } from '../components/Simulation'
 import {
   getAdminAccounts,
   getScoreboard,
   grantCredit,
+  updateAccountStatus,
   validatePartner,
   type AdminAccountsResponse,
   type ScoreboardResponse,
@@ -21,54 +22,22 @@ type Kpi = {
   warning?: boolean
 }
 
-const accounts: Account[] = [
-  {
-    name: 'Le Comptoir du Midi',
-    type: 'partner',
-    attachment: 'Restauration',
-    status: 'active',
-  },
-  {
-    name: 'Sport Loisirs Aubagne',
-    type: 'partner',
-    attachment: 'Sport',
-    status: 'suspended',
-  },
-  {
-    name: 'Pharmacie du Parc',
-    type: 'partner',
-    attachment: 'Santé',
-    status: 'active',
-  },
-  {
-    name: 'Épicerie Sainte-Claire',
-    type: 'partner',
-    attachment: 'Alimentation',
-    status: 'active',
-  },
-  {
-    name: 'Librairie Vasseur',
-    type: 'partner',
-    attachment: 'Culture',
-    status: 'active',
-  },
-  {
-    name: 'Transports Régionaux Unifiés',
-    type: 'partner',
-    attachment: 'Mobilité',
-    status: 'active',
-  },
-]
+type ManagedAccount = {
+  id: string
+  name: string
+  type: AccountType
+  attachment: string
+  status: 'active' | 'suspended'
+}
 
 const accountTypeLabels: Record<AccountType, string> = {
   employee: 'Salarié',
   partner: 'Partenaire',
 }
 
-const accountStatusLabels: Record<Account['status'], string> = {
+const accountStatusLabels: Record<ManagedAccount['status'], string> = {
   active: 'Actif',
   suspended: 'Suspendu',
-  closed: 'Clôturé',
 }
 
 const euro = (amount: number) =>
@@ -85,13 +54,13 @@ type Tab = (typeof tabs)[number]
 
 function Admin() {
   const [tab, setTab] = useState<Tab>(tabs[0])
-  const [accountList, setAccountList] = useState<Account[]>(accounts)
   const [accountFilter, setAccountFilter] = useState<'all' | AccountType>('all')
   const [accountQuery, setAccountQuery] = useState('')
 
   const [adminAccounts, setAdminAccounts] = useState<AdminAccountsResponse | null>(null)
   const [scoreboard, setScoreboard] = useState<ScoreboardResponse | null>(null)
   const [accountsLoading, setAccountsLoading] = useState(false)
+  const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(null)
 
   const [pendingDecision, setPendingDecision] = useState<
     { partnerId: string; kind: 'approve' | 'reject' } | null
@@ -167,8 +136,7 @@ function Admin() {
 
     const countsByRegion = adminAccounts.partners.reduce<Record<string, number>>(
       (acc, partner) => {
-        const regionName =
-          (partner as unknown as { region?: string }).region || 'Non spécifiée'
+        const regionName = partner.region || 'Non spécifiée'
         acc[regionName] = (acc[regionName] || 0) + 1
         return acc
       },
@@ -189,6 +157,42 @@ function Admin() {
     if (!adminAccounts) return []
     return adminAccounts.partners.filter((p) => p.status === 'pending')
   }, [adminAccounts])
+
+  const unifiedAccountsList = useMemo<ManagedAccount[]>(() => {
+    if (!adminAccounts) return []
+
+    const empAccounts: ManagedAccount[] = adminAccounts.employees.map((emp) => ({
+      id: emp.id,
+      name: `${emp.firstName} ${emp.lastName}`,
+      type: 'employee',
+      attachment: emp.email,
+      status: emp.status === 'active' ? 'active' : 'suspended',
+    }))
+
+    const partnerAccounts: ManagedAccount[] = adminAccounts.partners.map((partner) => ({
+      id: partner.id,
+      name: partner.name || 'Partenaire inconnu',
+      type: 'partner',
+      attachment: partner.email || 'Non renseigné',
+      status: partner.status === 'validated' ? 'active' : 'suspended',
+    }))
+
+    return [...empAccounts, ...partnerAccounts]
+  }, [adminAccounts])
+
+  const visibleAccounts = useMemo(() => {
+    const search = accountQuery.trim().toLowerCase()
+
+    return unifiedAccountsList.filter((account) => {
+      const matchesType = accountFilter === 'all' || account.type === accountFilter
+      const matchesSearch =
+        search === '' ||
+        account.name.toLowerCase().includes(search) ||
+        account.attachment.toLowerCase().includes(search)
+
+      return matchesType && matchesSearch
+    })
+  }, [unifiedAccountsList, accountFilter, accountQuery])
 
   const openDecision = (partnerId: string, kind: 'approve' | 'reject') => {
     setPendingDecision({ partnerId, kind })
@@ -226,27 +230,20 @@ function Admin() {
     }
   }
 
-  const setAccountStatus = (name: string, status: Account['status']) => {
-    setAccountList((current) =>
-      current.map((account) =>
-        account.name === name ? { ...account, status } : account,
-      ),
-    )
+  const handleUpdateStatus = async (
+    account: ManagedAccount,
+    nextStatus: ManagedAccount['status'],
+  ) => {
+    setUpdatingAccountId(account.id)
+    try {
+      await updateAccountStatus(account.id, account.type, nextStatus)
+      fetchData()
+    } catch (err) {
+      console.error("Échec du changement de statut:", getApiError(err).message)
+    } finally {
+      setUpdatingAccountId(null)
+    }
   }
-
-  const visibleAccounts = useMemo(() => {
-    const search = accountQuery.trim().toLowerCase()
-
-    return accountList.filter((account) => {
-      const matchesType = accountFilter === 'all' || account.type === accountFilter
-      const matchesSearch =
-        search === '' ||
-        account.name.toLowerCase().includes(search) ||
-        account.attachment.toLowerCase().includes(search)
-
-      return matchesType && matchesSearch
-    })
-  }, [accountList, accountFilter, accountQuery])
 
   const [amountPerEmployee, setAmountPerEmployee] = useState<number | ''>('')
   const [valueDate, setValueDate] = useState('2026-09-01')
@@ -260,7 +257,7 @@ function Admin() {
 
   const subsidyEmployees = useMemo(() => {
     if (!adminAccounts) return []
-    return adminAccounts.employees.map((emp) => ({
+    return adminAccounts.employees.filter((emp) => emp.status === 'active').map((emp) => ({
       id: Number(emp.id),
       name: `${emp.firstName} ${emp.lastName}`,
       email: emp.email,
@@ -583,79 +580,79 @@ function Admin() {
             type="search"
             value={accountQuery}
             onChange={(event) => setAccountQuery(event.target.value)}
-            placeholder="Rechercher un compte, un SIREN, un employeur"
-            aria-label="Rechercher un compte, un SIREN, un employeur"
+            placeholder="Rechercher un compte ou un email."
+            aria-label="Rechercher un compte ou un email."
           />
         </div>
 
         <div className="history-card">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th scope="col">Compte</th>
-                <th scope="col">Type</th>
-                <th scope="col">Rattachement</th>
-                <th scope="col">État</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleAccounts.map((account) => (
-                <tr key={account.name}>
-                  <td>
-                    <span className="history-partner">{account.name}</span>
-                  </td>
-                  <td>{accountTypeLabels[account.type]}</td>
-                  <td>{account.attachment}</td>
-                  <td>
-                    <span
-                      className={
-                        account.status === 'active'
-                          ? 'status-badge'
-                          : account.status === 'suspended'
-                            ? 'status-badge status-badge-warning'
-                            : 'status-badge status-badge-danger'
-                      }
-                    >
-                      {accountStatusLabels[account.status]}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="admin-requests-actions">
-                      <button
-                        className="admin-action"
-                        type="button"
-                        disabled={account.status === 'active'}
-                        onClick={() => setAccountStatus(account.name, 'active')}
-                      >
-                        Activer
-                      </button>
-                      <button
-                        className="admin-action-warning"
-                        type="button"
-                        disabled={account.status === 'suspended'}
-                        onClick={() =>
-                          setAccountStatus(account.name, 'suspended')
+          {accountsLoading ? (
+            <p>Chargement des comptes…</p>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th scope="col">Compte</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">État</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleAccounts.map((account) => (
+                  <tr key={`${account.type}-${account.id}`}>
+                    <td>
+                      <span className="history-partner">{account.name}</span>
+                    </td>
+                    <td>{accountTypeLabels[account.type]}</td>
+                    <td>{account.attachment}</td>
+                    <td>
+                      <span
+                        className={
+                          account.status === 'active'
+                            ? 'status-badge'
+                            : account.status === 'suspended'
+                              ? 'status-badge status-badge-warning'
+                              : 'status-badge status-badge-danger'
                         }
                       >
-                        Suspendre
-                      </button>
-                      <button
-                        className="admin-reject"
-                        type="button"
-                        disabled={account.status === 'closed'}
-                        onClick={() => setAccountStatus(account.name, 'closed')}
-                      >
-                        Clôturer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        {accountStatusLabels[account.status]}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="admin-requests-actions">
+                        <button
+                          className="admin-action"
+                          type="button"
+                          disabled={
+                            account.status === 'active' ||
+                            updatingAccountId === account.id
+                          }
+                          onClick={() => handleUpdateStatus(account, 'active')}
+                        >
+                          Activer
+                        </button>
+                        <button
+                          className="admin-action-warning"
+                          type="button"
+                          disabled={
+                            account.status === 'suspended' ||
+                            updatingAccountId === account.id
+                          }
+                          onClick={() => handleUpdateStatus(account, 'suspended')}
+                        >
+                          Suspendre
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
-          {visibleAccounts.length === 0 && (
+          {!accountsLoading && visibleAccounts.length === 0 && (
             <p className="admin-requests-empty">
               Aucun compte ne correspond à cette recherche.
             </p>

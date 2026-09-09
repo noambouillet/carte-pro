@@ -7,6 +7,8 @@ import { fetchTransactionHistoryCsv } from "../scripts/export";
 
 const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected")]);
 const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
+const accountStatusEnum = t.Union([t.Literal("active"), t.Literal("suspended"), t.Literal("closed")]);
+const accountTypeEnum = t.Union([t.Literal("employee"), t.Literal("partner")]);
 const errorSchema = t.Object({ error: t.String() });
 
 export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
@@ -70,6 +72,61 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
       },
       detail: {
         summary: "List all employee and partner accounts",
+        tags: ["admin"],
+      },
+    }
+  )
+  .patch("/accounts/:id/status", async ({ params, body, set }) => {
+      const accountId = Number(params.id);
+      const { type, status } = body;
+
+      let updatedId: number | undefined;
+
+      if (type === "partner") {
+        const mappedPartnerStatus = status === "active" ? "validated" : "rejected";
+        const [row] = await database
+          .update(partners)
+          .set({ status: mappedPartnerStatus })
+          .where(eq(partners.id, accountId))
+          .returning({ id: partners.id });
+        updatedId = row?.id;
+      } else {
+        const mappedEmployeeStatus = status === "active" ? "active" : "inactive";
+        const [row] = await database
+          .update(employees)
+          .set({ status: mappedEmployeeStatus })
+          .where(eq(employees.id, accountId))
+          .returning({ id: employees.id });
+        updatedId = row?.id;
+      }
+
+      if (!updatedId) {
+        set.status = 404;
+        return { error: "account_not_found" };
+      }
+
+      return { account: { id: String(updatedId), type, status } };
+    },
+    {
+      beforeHandle: requireAdmin,
+      body: t.Object({
+        type: accountTypeEnum,
+        status: accountStatusEnum,
+      }),
+      response: {
+        200: t.Object({
+          account: t.Object({
+            id: t.String(),
+            type: accountTypeEnum,
+            status: accountStatusEnum,
+          }),
+        }),
+        401: errorSchema,
+        403: errorSchema,
+        404: errorSchema,
+      },
+      detail: {
+        summary: "Update account status for employee or partner",
         tags: ["admin"],
       },
     }
