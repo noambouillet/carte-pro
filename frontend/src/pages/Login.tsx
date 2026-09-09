@@ -66,10 +66,6 @@ function Login({ onCreateAccount, onLoginSuccess }: LoginProps) {
         </div>
 
         <div className="field-group">
-          <div className="label-row">
-            <label htmlFor="password">Mot de passe</label>
-            <a href="/">Mot de passe oublié ?</a>
-          </div>
           <input
             id="password"
             type="password"

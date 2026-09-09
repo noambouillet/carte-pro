@@ -252,7 +252,7 @@ function Employee() {
                               {line.partnerName}
                             </span>
                             <span className="history-city">
-                              {line.partnerAddress}
+                              {line.partnerRegion}
                             </span>
                           </>
                         )}

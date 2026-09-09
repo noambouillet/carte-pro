@@ -50,7 +50,7 @@ function Network({ }: NetworkProps) {
 
       <div className="filters">
         <div className="filter-field">
-          <label htmlFor="search">Rechercher un établissement ou une adresse</label>
+          <label htmlFor="search">Rechercher un établissement ou une région</label>
           <input
             id="search"
             type="search"
@@ -80,7 +80,7 @@ function Network({ }: NetworkProps) {
               {partnersList.map((partner) => (
                 <li className="partner-card" key={partner.id}>
                   <h2>{partner.name}</h2>
-                  <p>{partner.address}</p>
+                  <p>{partner.Region}</p>
                 </li>
               ))}
             </ul>

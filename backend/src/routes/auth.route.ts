@@ -28,7 +28,7 @@ const meResponseSchema = t.Union([
       name: t.Union([t.String(), t.Null()]),
       siren: t.Union([t.String(), t.Null()]),
       objetSocial: t.Union([t.String(), t.Null()]),
-      address: t.Union([t.String(), t.Null()]),
+      region: t.Union([t.String(), t.Null()]),
       email: t.Union([t.String(), t.Null()]),
       status: partnerStatusEnum,
     }),
@@ -144,7 +144,7 @@ const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             name: partners.name,
             siren: partners.siren,
             objetSocial: partners.objetSocial,
-            address: partners.address,
+            region: partners.region,
             email: partners.email,
             status: partners.status,
           })

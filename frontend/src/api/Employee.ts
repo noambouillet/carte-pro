@@ -38,7 +38,7 @@ export interface EmployeeTransaction {
   occurredAt: string;
   partnerId: string | null;
   partnerName: string | null;
-  partnerAddress: string | null;
+  partnerRegion: string | null;
   qrCodeId: string | null;
   amountCents: number;
   status: EmployeeTransactionStatus;

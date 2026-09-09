@@ -5,7 +5,7 @@ export type PartnerStatus = "pending" | "validated" | "rejected" | "archived" ;
 export interface PartnerDirectoryEntry {
   id: string;
   name: string;
-  address: string;
+  Region: string;
   status: PartnerStatus;
 }
 
@@ -19,7 +19,7 @@ export interface PartnerTransaction {
 }
 
 export async function registerPartner(firstName: string, lastName: string, email: string, password: string, siren: string,
-  socialPurpose: string, establishmentName: string, establishmentAddress: string, establishmentPhone: string) {
+  socialPurpose: string, establishmentName: string, establishmentRegion: string, establishmentPhone: string) {
   try {
     const response = await api.post("/partners/register", {
       firstName,
@@ -29,7 +29,7 @@ export async function registerPartner(firstName: string, lastName: string, email
       siren,
       socialPurpose,
       establishmentName,
-      establishmentAddress,
+      establishmentRegion,
       establishmentPhone,
     });
 
