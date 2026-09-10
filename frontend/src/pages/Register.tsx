@@ -37,6 +37,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
   const [touched, setTouched] = useState({ siren: false, purpose: false })
   const [submitted, setSubmitted] = useState(false)
   const [showPartnerPendingModal, setShowPartnerPendingModal] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -65,6 +66,11 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
+
+    if (!acceptedTerms) {
+      return
+    }
+
     try {
       if (role === 'employee') {
         console.log('Registering employee:', firstName, lastName, email)
@@ -268,6 +274,25 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
             </div>
           </>
         )}
+
+        <div className="consent-group">
+          <label className="consent-label" htmlFor="accept-terms">
+            <input
+              id="accept-terms"
+              type="checkbox"
+              checked={acceptedTerms}
+              aria-invalid={(submitted && !acceptedTerms) || undefined}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+            />
+            J'accepte les conditions générales d'utilisation et la politique
+            de cookies.
+          </label>
+          {submitted && !acceptedTerms && (
+            <p className="field-error">
+              Vous devez accepter les conditions d'utilisation pour créer un compte.
+            </p>
+          )}
+        </div>
 
         <button
           className="primary-button"
