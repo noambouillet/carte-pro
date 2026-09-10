@@ -9,6 +9,7 @@ import { authRoutes } from "./routes/auth.route"
 import { adminRoutes } from "./routes/admin.routes";
 import { employeeRoutes } from "./routes/employee.routes";
 import { partnersRoutes } from "./routes/partners.routes";
+import { auditRoutes } from "./routes/audit.routes";
 
 const packageJson = await Bun.file("package.json").json();
 
@@ -87,6 +88,7 @@ async function start() {
       })
       .get("/", () => "Hello Carte Pro")
       .use(authRoutes)
+      .use(auditRoutes)
       .use(adminRoutes)
       .use(partnersRoutes)
       .use(employeeRoutes)

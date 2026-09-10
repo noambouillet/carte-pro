@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE employee_status AS ENUM ('active', 'inactive');
 CREATE TYPE partner_status AS ENUM ('pending', 'validated', 'rejected', 'archived');
@@ -107,6 +108,58 @@ CREATE TABLE transaction_attempts (
 CREATE INDEX idx_transaction_attempts_employee_id ON transaction_attempts (employee_id);
 CREATE INDEX idx_transaction_attempts_attempted_at ON transaction_attempts (attempted_at);
 CREATE UNIQUE INDEX idx_transaction_attempts_partner_idempotency ON transaction_attempts (partner_id, idempotency_key);
+
+
+CREATE TABLE audit_log (
+    id           BIGSERIAL PRIMARY KEY,
+    occurred_at  TIMESTAMPTZ(3) NOT NULL DEFAULT clock_timestamp(),
+    actor_id     BIGINT,
+    actor_role   TEXT NOT NULL,
+    action       TEXT NOT NULL,
+    target_type  TEXT,
+    target_id    TEXT,
+    payload      JSONB,
+    ip           TEXT,
+    prev_hash    CHAR(64) NOT NULL DEFAULT '',
+    record_hash  CHAR(64) NOT NULL DEFAULT ''
+);
+
+CREATE INDEX idx_audit_log_occurred_at ON audit_log (occurred_at);
+CREATE INDEX idx_audit_log_actor ON audit_log (actor_id, actor_role);
+CREATE INDEX idx_audit_log_action ON audit_log (action);
+CREATE INDEX idx_audit_log_target ON audit_log (target_type, target_id);
+
+CREATE OR REPLACE FUNCTION audit_log_chain()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_prev_hash CHAR(64);
+    v_payload_text TEXT;
+BEGIN
+    PERFORM pg_advisory_xact_lock(hashtext('audit_log_chain'));
+
+    SELECT record_hash INTO v_prev_hash FROM audit_log ORDER BY id DESC LIMIT 1;
+    NEW.prev_hash := COALESCE(v_prev_hash, repeat('0', 64));
+    v_payload_text := COALESCE(NEW.payload::text, '');
+
+    NEW.record_hash := encode(
+        digest(NEW.prev_hash || '|' || NEW.id::text || '|' || to_char(NEW.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+        || '|' || COALESCE(NEW.actor_id::text, '') || '|' || COALESCE(NEW.actor_role, '') || '|' || NEW.action || '|' ||
+        COALESCE(NEW.target_type, '') || '|' || COALESCE(NEW.target_id, '') || '|' || v_payload_text || '|' ||
+        COALESCE(NEW.ip, ''), 'sha256'),
+        'hex'
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_log_chain
+BEFORE INSERT ON audit_log
+FOR EACH ROW EXECUTE FUNCTION audit_log_chain();
+
+REVOKE UPDATE, DELETE ON audit_log FROM tickettout_user;
+GRANT INSERT, SELECT ON audit_log TO tickettout_user;
+GRANT USAGE, SELECT ON SEQUENCE audit_log_id_seq TO tickettout_user;
 
 CREATE VIEW employee_balances AS
 SELECT

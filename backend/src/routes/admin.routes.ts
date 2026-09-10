@@ -3,6 +3,7 @@ import { count, eq, sql } from "drizzle-orm";
 import { employees, partners, partnerValidationDecisions, creditGrants, transactions } from "../../db/drizzle/schema";
 import { database } from "../config/database";
 import { authPlugin, requireAdmin } from "../middleware/auth";
+import { recordAudit, clientIp } from "../middleware/audit";
 import { fetchTransactionHistoryCsv } from "../scripts/export";
 
 const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected"), t.Literal("archived")]);
@@ -76,7 +77,7 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
       },
     }
   )
-  .patch("/accounts/:id/status", async ({ params, body, set }) => {
+  .patch("/accounts/:id/status", async ({ params, body, authUser, request, set }) => {
       const accountId = Number(params.id);
       const { type, status } = body;
 
@@ -104,6 +105,16 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
         set.status = 404;
         return { error: "account_not_found" };
       }
+
+      await recordAudit(database, {
+        actorId: authUser!.id,
+        actorRole: "admin",
+        action: "account.status_updated",
+        targetType: type,
+        targetId: updatedId,
+        payload: { newStatus: status },
+        ip: clientIp(request),
+      });
 
       return { account: { id: String(updatedId), type, status } };
     },
@@ -190,7 +201,7 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
       },
     }
   )
-  .post("/partners/:id/validate", async ({ params, body, authUser, set }) => {
+  .post("/partners/:id/validate", async ({ params, body, authUser, request, set }) => {
       const partnerId = Number(params.id);
 
       const updated = await database.transaction(async (tx) => {
@@ -206,6 +217,18 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
           .set({ status: body.decision === "approved" ? "validated" : "rejected" })
           .where(eq(partners.id, partnerId))
           .returning({ id: partners.id, status: partners.status });
+
+        if (row) {
+          await recordAudit(tx, {
+            actorId: authUser!.id,
+            actorRole: "admin",
+            action: "partner.validation_decision",
+            targetType: "partner",
+            targetId: row.id,
+            payload: { decision: body.decision, reason: body.reason },
+            ip: clientIp(request),
+          });
+        }
 
         return row;
       });
@@ -235,13 +258,23 @@ export const adminRoutes = new Elysia({ prefix: "/api/v1/admin" })
       },
     }
   )
-  .post("/credit-grants", async ({ body, set }) => {
-      const [grant] = await database
-        .insert(creditGrants)
-        .values({ employeeId: body.employeeId, amountCents: body.amountCents })
-        .returning();
+  .post("/credit-grants", async ({ body, authUser, request, set }) => {
+    const [grant] = await database
+      .insert(creditGrants)
+      .values({ employeeId: body.employeeId, amountCents: body.amountCents })
+      .returning();
 
-      set.status = 201;
+    await recordAudit(database, {
+      actorId: authUser!.id,
+      actorRole: "admin",
+      action: "credit_grant.created",
+      targetType: "employee",
+      targetId: grant.employeeId,
+      payload: { amountCents: grant.amountCents, grantId: grant.id },
+      ip: clientIp(request),
+    });
+
+    set.status = 201;
       return {
         grant: {
           id: String(grant.id),

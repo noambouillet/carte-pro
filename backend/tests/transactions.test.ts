@@ -31,7 +31,7 @@ async function createValidatedPartner() {
       siren,
       objetSocial: "Test",
       name: `Partner ${suffix}`,
-      address: "1 rue de test",
+      region: "1 rue de test",
       email: `partner-${suffix}@test.local`,
       phone: "0600000000",
       passwordHash: "test-hash",
