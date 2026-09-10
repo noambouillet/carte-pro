@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import './shared.css'
+import { getMe } from './api/Auth'
 import Admin from './pages/Admin'
 import CreateAccount from './pages/Register'
 import Footer from './components/Footer'
@@ -17,10 +18,26 @@ const wideScreens: Screen[] = ['home', 'employee', 'partner', 'admin']
 function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [screen])
+
+  useEffect(() => {
+    getMe()
+      .then((me) => {
+        setIsLoggedIn(true)
+        setScreen(me.role)
+      })
+      .catch(() => {
+      })
+      .finally(() => setCheckingSession(false))
+  }, [])
+
+  if (checkingSession) {
+    return <p className="page-shell">Chargement…</p>
+  }
 
   return (
     <div className="app-shell">
