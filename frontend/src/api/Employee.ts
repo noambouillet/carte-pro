@@ -91,3 +91,8 @@ export async function generateEmployeeQrCode(): Promise<{ token: string; expires
   );
   return data;
 }
+
+export async function deleteEmployeeAccount(): Promise<{ success: true }> {
+  const { data } = await api.delete<{ success: true }>("/employees/me");
+  return data;
+}

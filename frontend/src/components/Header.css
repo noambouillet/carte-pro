@@ -151,6 +151,15 @@
   transition: background-color 0.2s ease;
 }
 
+.nav-danger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ce0500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 @media (max-width: 1080px) {
   .site-header-inner {
       grid-template-columns: minmax(0, 1fr);

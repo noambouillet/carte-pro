@@ -32,3 +32,13 @@
 .modal-body p + p {
   margin-top: 10px;
 }
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.modal-actions .primary-button,
+.modal-actions .secondary-button {
+  flex: 1;
+}

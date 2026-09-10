@@ -6,9 +6,20 @@ type ModalProps = {
   children: ReactNode
   onClose: () => void
   closeLabel?: string
+  onConfirm?: () => void
+  confirmLabel?: string
+  confirmDisabled?: boolean
 }
 
-function Modal({ title, children, onClose, closeLabel = 'Compris' }: ModalProps) {
+function Modal({
+  title,
+  children,
+  onClose,
+  closeLabel = 'Compris',
+  onConfirm,
+  confirmLabel = 'Confirmer',
+  confirmDisabled = false,
+}: ModalProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -20,9 +31,21 @@ function Modal({ title, children, onClose, closeLabel = 'Compris' }: ModalProps)
       >
         <h2 id="modal-title">{title}</h2>
         <div className="modal-body">{children}</div>
-        <button className="primary-button" type="button" onClick={onClose}>
-          {closeLabel}
-        </button>
+        <div className="modal-actions">
+          {onConfirm && (
+            <button className="secondary-button" type="button" onClick={onClose}>
+              {closeLabel}
+            </button>
+          )}
+          <button
+            className="primary-button"
+            type="button"
+            disabled={onConfirm ? confirmDisabled : false}
+            onClick={onConfirm ?? onClose}
+          >
+            {onConfirm ? confirmLabel : closeLabel}
+          </button>
+        </div>
       </div>
     </div>
   )

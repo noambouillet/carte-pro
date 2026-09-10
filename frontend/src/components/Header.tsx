@@ -6,7 +6,9 @@ type HeaderProps = {
   onBecomePartner: () => void
   onLogin: () => void
   onLogout: () => void
+  onDeleteAccount: () => void
   isLoggedIn: boolean
+  isEmployee: boolean
 }
 
 function Header({
@@ -14,7 +16,9 @@ function Header({
   onBecomePartner,
   onLogin,
   onLogout,
+  onDeleteAccount,
   isLoggedIn,
+  isEmployee,
 }: HeaderProps) {
   async function handleLogout() {
     try {
@@ -54,6 +58,12 @@ function Header({
           {!isLoggedIn && (
             <button className="nav-button" type="button" onClick={onLogin}>
               Se connecter
+            </button>
+          )}
+
+          {isLoggedIn && isEmployee && (
+            <button className="nav-danger" type="button" onClick={onDeleteAccount}>
+              Supprimer mon compte
             </button>
           )}
 
