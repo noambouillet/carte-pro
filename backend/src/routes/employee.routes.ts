@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { database } from "../config/database";
-import { authPlugin, requireEmployee, requireActiveEmployee, requireAdmin, hashPassword } from "../middleware/auth";
+import { authPlugin, requireActiveEmployee, requireAdmin, hashPassword, clearSession } from "../middleware/auth";
 import { qrJwtPlugin } from "../middleware/qr";
 import { recordAudit, clientIp } from "../middleware/audit";
 import { employees, employeeBalances, transactionHistory, qrCodes, partners } from "../../db/drizzle/schema";
@@ -95,7 +95,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
       return { balanceCents: Number(row.balance) };
     },
     {
-      beforeHandle: requireEmployee,
+      beforeHandle: requireActiveEmployee,
       response: {
         200: t.Object({ balanceCents: t.Integer() }),
         401: errorSchema,
@@ -152,7 +152,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
       };
     },
     {
-      beforeHandle: requireEmployee,
+      beforeHandle: requireActiveEmployee,
       response: {
         200: t.Object({
           transactions: t.Array(
@@ -217,6 +217,56 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
       },
     }
   )
+  .delete("/me", async ({ authUser, cookie, set, request }) => {
+    const [employee] = await database
+      .update(employees)
+      .set({
+        status: "inactive",
+      })
+      .where(eq(employees.id, authUser!.id))
+      .returning({
+        id: employees.id,
+        status: employees.status,
+      });
+
+    if (!employee) {
+      set.status = 404;
+      return { error: "employee_not_found" };
+    }
+
+    await recordAudit(database, {
+      actorId: authUser!.id,
+      actorRole: "employee",
+      action: "employee.deactivated",
+      targetType: "employee",
+      targetId: employee.id,
+      payload: {
+        status: employee.status,
+      },
+      ip: clientIp(request),
+    });
+    clearSession(cookie);
+
+    return {
+      success: true as const,
+    };
+  },
+  {
+    beforeHandle: requireActiveEmployee,
+    response: {
+      200: t.Object({
+        success: t.Literal(true),
+      }),
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
+    detail: {
+      summary: "Deactivate the currently authenticated employee",
+      description: "Soft-deletes the employee by setting their status to inactive.",
+      tags: ["employee"],
+    },
+  })
   .get("/:id/balance", async ({ params, set }) => {
       const employeeId = Number(params.id);
 
