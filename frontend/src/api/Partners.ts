@@ -5,7 +5,7 @@ export type PartnerStatus = "pending" | "validated" | "rejected" | "archived" ;
 export interface PartnerDirectoryEntry {
   id: string;
   name: string;
-  Region: string;
+  region: string;
   status: PartnerStatus;
 }
 

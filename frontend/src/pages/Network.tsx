@@ -80,7 +80,9 @@ function Network({ }: NetworkProps) {
               {partnersList.map((partner) => (
                 <li className="partner-card" key={partner.id}>
                   <h2>{partner.name}</h2>
-                  <p>{partner.Region}</p>
+                  <p className="partner-since">
+                    {partner.region || 'Région non renseignée'}
+                  </p>
                 </li>
               ))}
             </ul>
