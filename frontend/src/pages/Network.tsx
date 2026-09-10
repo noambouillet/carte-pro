@@ -7,16 +7,20 @@ type NetworkProps = {
   establishment: string
 }
 
+const PAGE_SIZE = 12
+
 function Network({ }: NetworkProps) {
   const [partnersList, setPartnersList] = useState<PartnerDirectoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
 
   const [query, setQuery] = useState('')
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setPage(0)
 
     searchPartners(query)
       .then((data) => {
@@ -40,6 +44,9 @@ function Network({ }: NetworkProps) {
       cancelled = true
     }
   }, [query])
+
+  const totalPages = Math.max(1, Math.ceil(partnersList.length / PAGE_SIZE))
+  const visiblePartners = partnersList.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
 
   return (
     <div className="dash-inner dash-body">
@@ -76,14 +83,38 @@ function Network({ }: NetworkProps) {
               Aucun établissement trouvé.
             </p>
           ) : (
-            <ul className="partner-grid">
-              {partnersList.map((partner) => (
-                <li className="partner-card" key={partner.id}>
-                  <h2>{partner.name}</h2>
-                  <p>{partner.address}</p>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="partner-grid">
+                {visiblePartners.map((partner) => (
+                  <li className="partner-card" key={partner.id}>
+                    <h2>{partner.name}</h2>
+                    <p>{partner.address}</p>
+                  </li>
+                ))}
+              </ul>
+
+              {totalPages > 1 && (
+                <div className="network-pagination">
+                  <button
+                    type="button"
+                    className="network-page-button"
+                    disabled={page === 0}
+                    onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                  >
+                    ← Précédent
+                  </button>
+
+                  <button
+                    type="button"
+                    className="network-page-button"
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setPage((current) => Math.min(current + 1, totalPages - 1))}
+                  >
+                    Suivant →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
