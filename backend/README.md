@@ -123,6 +123,35 @@ bun run add_admin    # create an admin account, prints the generated email and p
 There is no public sign-up for admin accounts. Use `add_admin` to create the
 first one.
 
+## Testing policy
+
+In `tests`:
+
+- **transactions.test.ts** : vérifie qu'une transaction ne peut pas être modifiée/supprimée, qu'un débit ne peut jamais dépasser le solde, et qu'un rejeu de paiement ne débite pas deux fois.
+- **auth.test.ts** : vérifie l'auth et la lecture de l'IP du client.
+- **endpoints.test.ts** : vérifie les routes API en vrai (login, solde, QR code, inscription, comptes admin, recherche et transactions partenaire), avec les bons codes de statut et les bonnes autorisations par rôle.
+- **load-test.js** : test de charge k6 (1 min), simule des salariés, partenaires et admins qui utilisent l'app en même temps pour voir si l'API tient sous charge.
+
+```bash
+bun test
+k6 run tests/load-test.js
+```
+
+To run the **k6 tests**, you'll first have to seed the database with `bun seed`.
+
+You can install k6 at `https://grafana.com/docs/k6/latest/set-up/install-k6/?pg=oss-k6&plcmt=deploy-box-1`
+
+## Seeding
+
+To start the seeding with Bun:
+
+```bash
+bun run seed
+```
+
+It makes up fake data, credits, balances, users of the three roles, and creates `transactions.csv`.  
+
+
 ## Database schema
 
 The Drizzle schema in `db/drizzle/schema.ts` is generated from the live
