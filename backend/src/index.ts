@@ -85,8 +85,10 @@ async function start() {
             }),
           }),
         },
+        detail: {
+          summary: "Checks if the backend services are ready",
+        },
       })
-      .get("/", () => "Hello Carte Pro")
       .use(authRoutes)
       .use(auditRoutes)
       .use(adminRoutes)
