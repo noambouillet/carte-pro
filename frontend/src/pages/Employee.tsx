@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Qr from '../components/Qr'
 import { Amount, SimulationNotice } from '../components/Simulation'
 import './Employee.css'
@@ -40,48 +40,50 @@ function Employee() {
   const [showAll, setShowAll] = useState(false)
   const [tab, setTab] = useState(tabs[0])
 
+  const loadData = useCallback(async () => {
+    try {
+      try {
+        const balance = await getEmployeeBalance()
+        setBalanceCents(balance.balanceCents)
+        saveEmployeeBalance(balance.balanceCents)
+        setDegradedMode(false)
+      } catch {
+        const cached = getCachedEmployeeBalance()
+        if (cached) {
+          setBalanceCents(cached.balanceCents)
+          setDegradedMode(true)
+          setCachedAt(cached.cachedAt)
+        } else {
+          setError('Impossible de charger votre solde.')
+        }
+      }
+
+      try {
+        const transaction = await getEmployeeTransactions()
+        setTransactions(transaction.transactions)
+      } catch {
+      }
+    } catch (err) {
+      setError(getApiError(err).message ?? 'Impossible de charger vos données.')
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
-    const load = async () => {
+    const init = async () => {
       try {
         const me = await getMe()
 
-        if (cancelled)
-          return
+        if (cancelled) return
         if (me.role !== 'employee') {
           setError('Compte non employé.')
+          setLoading(false)
           return
         }
 
         setProfile(me.employee)
-        try {
-          const balance = await getEmployeeBalance()
-
-          if (!cancelled) {
-            setBalanceCents(balance.balanceCents)
-            saveEmployeeBalance(balance.balanceCents)
-          }
-        } catch {
-          const cached = getCachedEmployeeBalance()
-
-          if (cached && !cancelled) {
-            setBalanceCents(cached.balanceCents)
-            setDegradedMode(true)
-            setCachedAt(cached.cachedAt)
-          } else if (!cancelled) {
-            setError('Impossible de charger votre solde.')
-          }
-        }
-
-        try {
-          const transaction = await getEmployeeTransactions()
-
-          if (!cancelled) {
-            setTransactions(transaction.transactions)
-          }
-        } catch {
-        }
+        await loadData()
       } catch (err) {
         if (!cancelled) {
           setError(getApiError(err).message ?? 'Impossible de charger vos données.')
@@ -93,11 +95,16 @@ function Employee() {
       }
     }
 
-    load()
+    init()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadData])
+
+  const handleCloseQr = useCallback(async () => {
+    setShowQr(false)
+    await loadData()
+  }, [loadData])
 
   const visible = showAll ? transactions : transactions.slice(0, PREVIEW)
 
@@ -191,7 +198,7 @@ function Employee() {
             <button
               className="action-secondary"
               type="button"
-              onClick={() => setShowQr(false)}
+              onClick={handleCloseQr}
             >
               Retour à mon espace
             </button>
