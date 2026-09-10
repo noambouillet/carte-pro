@@ -157,9 +157,9 @@ CREATE TRIGGER trg_audit_log_chain
 BEFORE INSERT ON audit_log
 FOR EACH ROW EXECUTE FUNCTION audit_log_chain();
 
-REVOKE UPDATE, DELETE ON audit_log FROM tickettout_user;
-GRANT INSERT, SELECT ON audit_log TO tickettout_user;
-GRANT USAGE, SELECT ON SEQUENCE audit_log_id_seq TO tickettout_user;
+REVOKE UPDATE, DELETE ON audit_log FROM cartepro_user;
+GRANT INSERT, SELECT ON audit_log TO cartepro_user;
+GRANT USAGE, SELECT ON SEQUENCE audit_log_id_seq TO cartepro_user;
 
 CREATE VIEW employee_balances AS
 SELECT
