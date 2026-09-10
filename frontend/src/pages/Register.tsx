@@ -11,6 +11,27 @@ type CreateAccountProps = {
 
 const PURPOSE_MIN = 10
 
+const REGIONS = [
+  'Auvergne-Rhône-Alpes',
+  'Bourgogne-Franche-Comté',
+  'Bretagne',
+  'Centre-Val de Loire',
+  'Corse',
+  'Grand Est',
+  'Hauts-de-France',
+  'Île-de-France',
+  'Normandie',
+  'Nouvelle-Aquitaine',
+  'Occitanie',
+  'Pays de la Loire',
+  'Provence-Alpes-Côte d\'Azur',
+  'Guadeloupe',
+  'Martinique',
+  'Guyane',
+  'La Réunion',
+  'Mayotte',
+]
+
 function CreateAccount({ onBackToLogin }: CreateAccountProps) {
   const [role, setRole] = useState('')
   const [touched, setTouched] = useState({ siren: false, purpose: false })
@@ -26,7 +47,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
   const [siren, setSiren] = useState('')
   const [socialPurpose, setSocialPurpose] = useState('')
   const [establishmentName, setEstablishmentName] = useState('')
-  const [establishmentAddress, setEstablishmentAddress] = useState('')
+  const [establishmentRegion, setEstablishmentRegion] = useState('')
   const [establishmentPhone, setEstablishmentPhone] = useState('')
 
   const isPartner = role === 'partner'
@@ -57,7 +78,7 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
             cleanSiren(siren),
             socialPurpose,
             establishmentName,
-            establishmentAddress,
+            establishmentRegion,
             establishmentPhone
         )
         setShowPartnerPendingModal(true)
@@ -215,18 +236,24 @@ function CreateAccount({ onBackToLogin }: CreateAccountProps) {
                 value={establishmentName}
                 onChange={(event) => setEstablishmentName(event.target.value)}
               />
-
             </div>
 
             <div className="field-group">
-              <label htmlFor="address">Adresse de l'établissement</label>
-              <input
-                id="address"
-                type="text"
-                placeholder="12 rue de la République, 75001 Paris"
-                value={establishmentAddress}
-                onChange={(event) => setEstablishmentAddress(event.target.value)}
-              />
+              <label htmlFor="region">Région de l'établissement</label>
+              <select
+                id="region"
+                value={establishmentRegion}
+                onChange={(event) => setEstablishmentRegion(event.target.value)}
+              >
+                <option value="" disabled>
+                  Sélectionnez une région
+                </option>
+                {REGIONS.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="field-group">

@@ -1,5 +1,4 @@
 import './LandingPage.css'
-import { partners } from './partners'
 import { getMe } from '../api/Auth'
 
 type HomeProps = {
@@ -83,21 +82,6 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
             </button>
           </div>
           )}
-
-          <dl className="home-stats">
-            <div className="stat">
-              <dt className="stat-value">128 400</dt>
-              <dd className="stat-label">salariés bénéficiaires</dd>
-            </div>
-            <div className="stat">
-              <dt className="stat-value">5 731</dt>
-              <dd className="stat-label">commerçants partenaires</dd>
-            </div>
-            <div className="stat">
-              <dt className="stat-value">1 246</dt>
-              <dd className="stat-label">employeurs adhérents</dd>
-            </div>
-          </dl>
         </div>
 
         <aside className="home-aside" aria-labelledby="audience-title">
@@ -138,32 +122,6 @@ function Home({ onLogin, onBecomePartner, onEmployee, onAdmin, onPartner, isLogg
               </li>
             ))}
           </ol>
-        </div>
-      </section>
-
-      <section className="band" aria-labelledby="network-title">
-        <div className="band-inner">
-          <div className="band-head">
-            <div>
-              <h2 className="band-title" id="network-title">
-                Le réseau de partenaires
-              </h2>
-              <p className="band-subtitle">
-                5 731 commerçants référencés dans 13 régions. Aperçu de quelques
-                établissements.
-              </p>
-            </div>
-          </div>
-
-          <ul className="partner-grid">
-            {partners.slice(0, 6).map((partner) => (
-              <li className="partner-card" key={partner.name}>
-                <span className="partner-category">{partner.category}</span>
-                <h3>{partner.name}</h3>
-                <p>{partner.city}</p>
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
     </>

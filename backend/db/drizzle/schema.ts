@@ -36,7 +36,7 @@ export const partners = pgTable(
     lastName: text("last_name"),
     siren: char({ length: 9 }),
     objetSocial: text("objet_social"),
-    address: text(),
+    region: text(),
     name: text("name"),
     email: text("email").unique(),
     phone: text("phone"),

@@ -57,7 +57,7 @@ function Network({ }: NetworkProps) {
 
       <div className="filters">
         <div className="filter-field">
-          <label htmlFor="search">Rechercher un établissement ou une adresse</label>
+          <label htmlFor="search">Rechercher un établissement ou une région</label>
           <input
             id="search"
             type="search"

@@ -2,10 +2,17 @@ import './Admin.css'
 import './Employee.css'
 import './Partner.css'
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Account, AccountType } from '../types/account'
+import type { AccountType } from '../types/account'
 import { Amount, SimulationNotice } from '../components/Simulation'
-import type { ReferralRequest } from '../types/referral'
-import { getAdminAccounts, grantCredit, type AdminAccountsResponse } from '../api/Admin'
+import {
+  getAdminAccounts,
+  getScoreboard,
+  grantCredit,
+  updateAccountStatus,
+  validatePartner,
+  type AdminAccountsResponse,
+  type ScoreboardResponse,
+} from '../api/Admin'
 import { getApiError } from '../api/Errors'
 
 type Kpi = {
@@ -15,119 +22,23 @@ type Kpi = {
   warning?: boolean
 }
 
-const kpis: Kpi[] = [
-  {
-    label: 'Volume de transactions',
-    value: '41,7 M€',
-    hint: 'Cumul 2026',
-  },
-  {
-    label: 'Partenaires actifs',
-    value: '5 731',
-    hint: '+ 214 sur 30 jours',
-  },
-  {
-    label: 'Salariés actifs',
-    value: '128 400',
-    hint: 'Sur 1 246 employeurs adhérents',
-  },
-  {
-    label: 'Demandes en attente',
-    value: '4',
-    hint: 'Délai moyen d’instruction : 3,2 jours',
-    warning: true,
-  },
-]
-
-const regions = [
-  { name: 'Île-de-France', count: 1240 },
-  { name: 'Auvergne-Rhône-Alpes', count: 812 },
-  { name: 'Provence-Alpes-Côte d’Azur', count: 604 },
-  { name: 'Occitanie', count: 517 },
-  { name: 'Nouvelle-Aquitaine', count: 498 },
-  { name: 'Hauts-de-France', count: 431 },
-  { name: 'Grand Est', count: 402 },
-]
-
-const referralRequests: ReferralRequest[] = [
-  {
-    establishment: 'Fleuriste Camélia',
-    city: 'Angers',
-    category: 'Commerce',
-    siren: '904 118 552',
-    submittedAt: '29/08/2026',
-  },
-  {
-    establishment: 'Cinéma Le Rialto',
-    city: 'Metz',
-    category: 'Culture',
-    siren: '512 663 041',
-    submittedAt: '28/08/2026',
-  },
-  {
-    establishment: 'Traiteur Les Deux Tables',
-    city: 'Dijon',
-    category: 'Restauration',
-    siren: '833 907 216 ',
-    submittedAt: '28/08/2026',
-  },
-  {
-    establishment: 'Studio Pilates Aria',
-    city: 'Reims',
-    category: 'Sport',
-    siren: '789 452 330',
-    submittedAt: '27/08/2026',
-  },
-]
-
-const accounts: Account[] = [
-  {
-    name: 'Le Comptoir du Midi',
-    type: 'partner',
-    attachment: 'Restauration',
-    status: 'active',
-  },
-  {
-    name: 'Sport Loisirs Aubagne',
-    type: 'partner',
-    attachment: 'Sport',
-    status: 'suspended',
-  },
-  {
-    name: 'Pharmacie du Parc',
-    type: 'partner',
-    attachment: 'Santé',
-    status: 'active',
-  },
-  {
-    name: 'Épicerie Sainte-Claire',
-    type: 'partner',
-    attachment: 'Alimentation',
-    status: 'active',
-  },
-  {
-    name: 'Librairie Vasseur',
-    type: 'partner',
-    attachment: 'Culture',
-    status: 'active',
-  },
-  {
-    name: 'Transports Régionaux Unifiés',
-    type: 'partner',
-    attachment: 'Mobilité',
-    status: 'active',
-  },
-]
+type ManagedAccount = {
+  id: string
+  name: string
+  type: AccountType
+  attachment: string
+  status: 'active' | 'suspended' | 'archived'
+}
 
 const accountTypeLabels: Record<AccountType, string> = {
   employee: 'Salarié',
   partner: 'Partenaire',
 }
 
-const accountStatusLabels: Record<Account['status'], string> = {
+const accountStatusLabels: Record<ManagedAccount['status'], string> = {
   active: 'Actif',
   suspended: 'Suspendu',
-  closed: 'Clôturé',
+  archived: 'Clôturé',
 }
 
 const euro = (amount: number) =>
@@ -144,84 +55,215 @@ type Tab = (typeof tabs)[number]
 
 function Admin() {
   const [tab, setTab] = useState<Tab>(tabs[0])
-  const [requests, setRequests] = useState<ReferralRequest[]>(referralRequests)
-  const [accountList, setAccountList] = useState<Account[]>(accounts)
   const [accountFilter, setAccountFilter] = useState<'all' | AccountType>('all')
   const [accountQuery, setAccountQuery] = useState('')
 
-  const [employeesApiList, setEmployeesApiList] = useState<AdminAccountsResponse['employees']>([])
-  const [employeesLoading, setEmployeesLoading] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    setEmployeesLoading(true)
-    getAdminAccounts()
-      .then((data) => {
-        if (!cancelled) {
-          setEmployeesApiList(data.employees)
-        }
-      })
-      .catch((err) => {
-        console.error('Erreur chargement salariés:', getApiError(err).message)
-      })
-      .finally(() => {
-        if (!cancelled) setEmployeesLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const maxRegion = Math.max(...regions.map((region) => region.count))
-
-  const decideRequest = (siren: string) => {
-    setRequests((current) => current.filter((request) => request.siren !== siren))
-  }
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccountsResponse | null>(null)
+  const [scoreboard, setScoreboard] = useState<ScoreboardResponse | null>(null)
+  const [accountsLoading, setAccountsLoading] = useState(false)
+  const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(null)
 
   const [pendingDecision, setPendingDecision] = useState<
-    { siren: string; kind: 'approve' | 'reject' } | null
+    { partnerId: string; kind: 'approve' | 'reject' } | null
   >(null)
   const [decisionReason, setDecisionReason] = useState('')
+  const [decisionSubmitting, setDecisionSubmitting] = useState(false)
+  const [decisionError, setDecisionError] = useState('')
 
-  const openDecision = (siren: string, kind: 'approve' | 'reject') => {
-    setPendingDecision({ siren, kind })
-    setDecisionReason('')
+  const fetchData = () => {
+    setAccountsLoading(true)
+    Promise.all([getAdminAccounts(), getScoreboard()])
+      .then(([accountsData, scoreboardData]) => {
+        setAdminAccounts(accountsData)
+        setScoreboard(scoreboardData)
+      })
+      .catch((err) => {
+        console.error('Erreur chargement des données admin:', getApiError(err).message)
+      })
+      .finally(() => {
+        setAccountsLoading(false)
+      })
   }
 
-  const cancelDecision = () => {
-    setPendingDecision(null)
-    setDecisionReason('')
-  }
+  useEffect(() => {
+    fetchData()
+  }, [])
 
-  const confirmDecision = () => {
-    if (!pendingDecision) return
-    decideRequest(pendingDecision.siren)
-    setPendingDecision(null)
-    setDecisionReason('')
-  }
+  const dynamicKpis: Kpi[] = useMemo(() => {
+    if (!scoreboard) {
+      return [
+        { label: 'Volume de transactions', value: '— €', hint: 'Chargement…' },
+        { label: 'Partenaires actifs', value: '—', hint: 'Chargement…' },
+        { label: 'Salariés actifs', value: '—', hint: 'Chargement…' },
+        { label: 'Demandes en attente', value: '—', hint: 'Chargement…' },
+      ]
+    }
 
-  const setAccountStatus = (name: string, status: Account['status']) => {
-    setAccountList((current) =>
-      current.map((account) =>
-        account.name === name ? { ...account, status } : account,
-      ),
+    const volumeInEuros = scoreboard.transactions.totalAmountCents / 100
+    const formattedVolume =
+      volumeInEuros >= 1_000_000
+        ? `${(volumeInEuros / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M€`
+        : euro(volumeInEuros)
+
+    return [
+      {
+        label: 'Volume de transactions',
+        value: formattedVolume,
+        hint: `${scoreboard.transactions.totalTransactions.toLocaleString('fr-FR')} transaction(s)`,
+      },
+      {
+        label: 'Partenaires actifs',
+        value: scoreboard.partners.validated.toLocaleString('fr-FR'),
+        hint: `Sur ${scoreboard.partners.total.toLocaleString('fr-FR')} partenaires au total`,
+      },
+      {
+        label: 'Salariés actifs',
+        value: scoreboard.employees.active.toLocaleString('fr-FR'),
+        hint: `Sur ${scoreboard.employees.total.toLocaleString('fr-FR')} salariés inscrits`,
+      },
+      {
+        label: 'Demandes en attente',
+        value: String(scoreboard.partners.pending),
+        hint: 'Partenaires en attente de validation',
+        warning: scoreboard.partners.pending > 0,
+      },
+    ]
+  }, [scoreboard])
+
+  const dynamicRegions = useMemo(() => {
+    if (!adminAccounts || adminAccounts.partners.length === 0) {
+      return []
+    }
+
+    const countsByRegion = adminAccounts.partners.reduce<Record<string, number>>(
+      (acc, partner) => {
+        const regionName = partner.region || 'Non spécifiée'
+        acc[regionName] = (acc[regionName] || 0) + 1
+        return acc
+      },
+      {},
     )
-  }
+
+    return Object.entries(countsByRegion)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [adminAccounts])
+
+  const maxRegion = useMemo(() => {
+    if (dynamicRegions.length === 0) return 1
+    return Math.max(...dynamicRegions.map((region) => region.count))
+  }, [dynamicRegions])
+
+  const pendingPartners = useMemo(() => {
+    if (!adminAccounts) return []
+    return adminAccounts.partners.filter((p) => p.status === 'pending')
+  }, [adminAccounts])
+
+  const unifiedAccountsList = useMemo<ManagedAccount[]>(() => {
+    if (!adminAccounts) return []
+
+    const empAccounts: ManagedAccount[] = adminAccounts.employees.map((emp) => {
+      const rawStatus = (emp.status as string)
+      return {
+        id: emp.id,
+        name: `${emp.firstName} ${emp.lastName}`,
+        type: 'employee',
+        attachment: emp.email,
+        status:
+          rawStatus === 'archived' || rawStatus === 'closed' || rawStatus === 'inactive'
+            ? 'archived'
+            : rawStatus === 'active'
+              ? 'active'
+              : 'suspended',
+      }
+    })
+
+    const partnerAccounts: ManagedAccount[] = adminAccounts.partners.map((partner) => {
+      const rawStatus = (partner.status as string)
+      return {
+        id: partner.id,
+        name: partner.name || 'Partenaire inconnu',
+        type: 'partner',
+        attachment: partner.email || 'Non renseigné',
+        status:
+          rawStatus === 'archived' || rawStatus === 'closed' || rawStatus === 'rejected'
+            ? 'archived'
+            : rawStatus === 'validated' || rawStatus === 'active'
+              ? 'active'
+              : 'suspended',
+      }
+    })
+
+    return [...empAccounts, ...partnerAccounts]
+  }, [adminAccounts])
 
   const visibleAccounts = useMemo(() => {
     const search = accountQuery.trim().toLowerCase()
 
-    return accountList.filter((account) => {
+    return unifiedAccountsList.filter((account) => {
+      const isNotArchived = account.status !== 'archived'
       const matchesType = accountFilter === 'all' || account.type === accountFilter
       const matchesSearch =
         search === '' ||
         account.name.toLowerCase().includes(search) ||
         account.attachment.toLowerCase().includes(search)
 
-      return matchesType && matchesSearch
+      return isNotArchived && matchesType && matchesSearch
     })
-  }, [accountList, accountFilter, accountQuery])
+  }, [unifiedAccountsList, accountFilter, accountQuery])
+
+  const openDecision = (partnerId: string, kind: 'approve' | 'reject') => {
+    setPendingDecision({ partnerId, kind })
+    setDecisionReason('')
+    setDecisionError('')
+  }
+
+  const cancelDecision = () => {
+    setPendingDecision(null)
+    setDecisionReason('')
+    setDecisionError('')
+  }
+
+  const confirmDecision = async () => {
+    if (!pendingDecision || !decisionReason.trim()) return
+
+    setDecisionSubmitting(true)
+    setDecisionError('')
+
+    try {
+      await validatePartner(
+        pendingDecision.partnerId,
+        pendingDecision.kind === 'approve' ? 'approved' : 'rejected',
+        decisionReason.trim(),
+      )
+      setPendingDecision(null)
+      setDecisionReason('')
+      fetchData()
+    } catch (err) {
+      setDecisionError(
+        getApiError(err).message ?? "Échec lors de l'enregistrement de la décision.",
+      )
+    } finally {
+      setDecisionSubmitting(false)
+    }
+  }
+
+  const handleUpdateStatus = async (
+    account: ManagedAccount,
+    nextStatus: ManagedAccount['status'],
+  ) => {
+    setUpdatingAccountId(account.id)
+    try {
+      const apiStatus = nextStatus === 'archived' ? 'closed' : nextStatus
+
+      await updateAccountStatus(account.id, account.type, apiStatus)
+      fetchData()
+    } catch (err) {
+      console.error("Échec du changement de statut:", getApiError(err).message)
+    } finally {
+      setUpdatingAccountId(null)
+    }
+  }
 
   const [amountPerEmployee, setAmountPerEmployee] = useState<number | ''>('')
   const [valueDate, setValueDate] = useState('2026-09-01')
@@ -234,12 +276,13 @@ function Admin() {
   const numericAmount = amountPerEmployee === '' ? 0 : amountPerEmployee
 
   const subsidyEmployees = useMemo(() => {
-    return employeesApiList.map((emp) => ({
+    if (!adminAccounts) return []
+    return adminAccounts.employees.filter((emp) => emp.status === 'active').map((emp) => ({
       id: Number(emp.id),
       name: `${emp.firstName} ${emp.lastName}`,
       email: emp.email,
     }))
-  }, [employeesApiList])
+  }, [adminAccounts])
 
   const visibleSubsidyEmployees = useMemo(() => {
     const search = employeeQuery.trim().toLowerCase()
@@ -289,6 +332,7 @@ function Admin() {
         `Abondement de ${euro(numericAmount)} accordé avec succès à ${selectedCount} salarié(s).`,
       )
       setSelectedIds(new Set())
+      fetchData()
     } catch (err) {
       setSubsidyFeedback(
         getApiError(err).message ?? "Échec lors de l'attribution des crédits.",
@@ -307,7 +351,7 @@ function Admin() {
         <SimulationNotice />
 
         <dl className="kpi-grid">
-          {kpis.map((kpi) => (
+          {dynamicKpis.map((kpi) => (
             <div
               className={kpi.warning ? 'kpi-card kpi-card-warning' : 'kpi-card'}
               key={kpi.label}
@@ -331,29 +375,32 @@ function Admin() {
         >
           <div className="admin-regions-head">
             <h2 className="band-title" id="admin-regions-title">
-              Régions les plus actives
+              Provenances des partenaires actifs par région
             </h2>
-            <button className="band-link" type="button">
-              Télécharger les données (CSV)
-            </button>
           </div>
 
-          <ol className="admin-region-list">
-            {regions.map((region) => (
-              <li className="admin-region-row" key={region.name}>
-                <span className="admin-region-name">{region.name}</span>
-                <span className="admin-region-track">
-                  <span
-                    className="admin-region-bar"
-                    style={{ width: `${(region.count / maxRegion) * 100}%` }}
-                  />
-                </span>
-                <span className="admin-region-count">
-                  {region.count.toLocaleString('fr-FR')}
-                </span>
-              </li>
-            ))}
-          </ol>
+          {dynamicRegions.length === 0 ? (
+            <p className="admin-requests-empty">
+              Aucune donnée régionale disponible.
+            </p>
+          ) : (
+            <ol className="admin-region-list">
+              {dynamicRegions.map((region) => (
+                <li className="admin-region-row" key={region.name}>
+                  <span className="admin-region-name">{region.name}</span>
+                  <span className="admin-region-track">
+                    <span
+                      className="admin-region-bar"
+                      style={{ width: `${(region.count / maxRegion) * 100}%` }}
+                    />
+                  </span>
+                  <span className="admin-region-count">
+                    {region.count.toLocaleString('fr-FR')}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
       </div>
     )
@@ -367,113 +414,131 @@ function Admin() {
             </h1>
           </div>
           <span className="admin-requests-count">
-            {requests.length} dossier{requests.length > 1 ? 's' : ''}
+            {pendingPartners.length} dossier{pendingPartners.length > 1 ? 's' : ''}
           </span>
         </div>
 
         <div className="history-card">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th scope="col">Établissement</th>
-                <th scope="col">Catégorie</th>
-                <th scope="col">SIREN</th>
-                <th scope="col">Déposée le</th>
-                <th scope="col">Décision</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((request) => (
-                <Fragment key={request.siren}>
-                  <tr>
-                    <td>
-                      <span className="history-partner">
-                        {request.establishment}
-                      </span>
-                      <span className="history-city">{request.city}</span>
-                    </td>
-                    <td>{request.category}</td>
-                    <td className="admin-requests-siren">{request.siren}</td>
-                    <td>{request.submittedAt}</td>
-                    <td>
-                      <div className="admin-requests-actions">
-                        <button
-                          className="admin-approve"
-                          type="button"
-                          onClick={() => openDecision(request.siren, 'approve')}
-                        >
-                          Valider
-                        </button>
-                        <button
-                          className="admin-reject"
-                          type="button"
-                          onClick={() => openDecision(request.siren, 'reject')}
-                        >
-                          Refuser
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+          {accountsLoading ? (
+            <p>Chargement des demandes…</p>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th scope="col">Établissement</th>
+                  <th scope="col">Contact / Email</th>
+                  <th scope="col">Déposée le</th>
+                  <th scope="col">Décision</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingPartners.map((partner) => {
+                  const formattedDate = partner.createdAt
+                    ? new Date(partner.createdAt).toLocaleDateString('fr-FR')
+                    : 'Date inconnue'
 
-                  {pendingDecision?.siren === request.siren && (
-                    <tr className="admin-decision-row">
-                      <td colSpan={5}>
-                        <div className="admin-decision-form">
-                          <div className="admin-decision-field">
-                            <label htmlFor={`decision-reason-${request.siren}`}>
-                              {pendingDecision.kind === 'approve'
-                                ? 'Motif de validation'
-                                : 'Motif de refus'}
-                            </label>
-                            <input
-                              id={`decision-reason-${request.siren}`}
-                              type="text"
-                              value={decisionReason}
-                              onChange={(event) =>
-                                setDecisionReason(event.target.value)
-                              }
-                              placeholder={
-                                pendingDecision.kind === 'approve'
-                                  ? 'Ex. : dossier conforme, SIREN vérifié.'
-                                  : 'Ex. : pièces manquantes, activité hors périmètre.'
-                              }
-                              autoFocus
-                            />
-                          </div>
-
-                          <div className="admin-decision-buttons">
+                  return (
+                    <Fragment key={partner.id}>
+                      <tr>
+                        <td>
+                          <span className="history-partner">
+                            {partner.name || 'Nom non renseigné'}
+                          </span>
+                        </td>
+                        <td>{partner.email || 'Non renseigné'}</td>
+                        <td>{formattedDate}</td>
+                        <td>
+                          <div className="admin-requests-actions">
                             <button
-                              className={
-                                pendingDecision.kind === 'approve'
-                                  ? 'admin-approve'
-                                  : 'admin-reject'
-                              }
+                              className="admin-approve"
                               type="button"
-                              disabled={decisionReason.trim() === ''}
-                              onClick={confirmDecision}
+                              onClick={() => openDecision(partner.id, 'approve')}
                             >
-                              {pendingDecision.kind === 'approve'
-                                ? 'Confirmer la validation'
-                                : 'Confirmer le refus'}
+                              Valider
                             </button>
                             <button
-                              className="admin-action"
+                              className="admin-reject"
                               type="button"
-                              onClick={cancelDecision}
+                              onClick={() => openDecision(partner.id, 'reject')}
                             >
-                              Annuler
+                              Refuser
                             </button>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
 
-          {requests.length === 0 && (
+                      {pendingDecision?.partnerId === partner.id && (
+                        <tr className="admin-decision-row">
+                          <td colSpan={4}>
+                            <div className="admin-decision-form">
+                              <div className="admin-decision-field">
+                                <label htmlFor={`decision-reason-${partner.id}`}>
+                                  {pendingDecision.kind === 'approve'
+                                    ? 'Motif de validation'
+                                    : 'Motif de refus'}
+                                </label>
+                                <input
+                                  id={`decision-reason-${partner.id}`}
+                                  type="text"
+                                  value={decisionReason}
+                                  onChange={(event) =>
+                                    setDecisionReason(event.target.value)
+                                  }
+                                  placeholder={
+                                    pendingDecision.kind === 'approve'
+                                      ? 'Ex. : dossier conforme, SIREN vérifié.'
+                                      : 'Ex. : pièces manquantes, activité hors périmètre.'
+                                  }
+                                  autoFocus
+                                />
+                              </div>
+
+                              {decisionError && (
+                                <p className="pay-receipt" role="alert">
+                                  {decisionError}
+                                </p>
+                              )}
+
+                              <div className="admin-decision-buttons">
+                                <button
+                                  className={
+                                    pendingDecision.kind === 'approve'
+                                      ? 'admin-approve'
+                                      : 'admin-reject'
+                                  }
+                                  type="button"
+                                  disabled={
+                                    decisionReason.trim() === '' || decisionSubmitting
+                                  }
+                                  onClick={confirmDecision}
+                                >
+                                  {decisionSubmitting
+                                    ? 'Enregistrement…'
+                                    : pendingDecision.kind === 'approve'
+                                      ? 'Confirmer la validation'
+                                      : 'Confirmer le refus'}
+                                </button>
+                                <button
+                                  className="admin-action"
+                                  type="button"
+                                  disabled={decisionSubmitting}
+                                  onClick={cancelDecision}
+                                >
+                                  Annuler
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {!accountsLoading && pendingPartners.length === 0 && (
             <p className="admin-requests-empty">
               Aucune demande en attente.
             </p>
@@ -535,79 +600,106 @@ function Admin() {
             type="search"
             value={accountQuery}
             onChange={(event) => setAccountQuery(event.target.value)}
-            placeholder="Rechercher un compte, un SIREN, un employeur"
-            aria-label="Rechercher un compte, un SIREN, un employeur"
+            placeholder="Rechercher un compte ou un email."
+            aria-label="Rechercher un compte ou un email."
           />
         </div>
 
         <div className="history-card">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th scope="col">Compte</th>
-                <th scope="col">Type</th>
-                <th scope="col">Rattachement</th>
-                <th scope="col">État</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleAccounts.map((account) => (
-                <tr key={account.name}>
-                  <td>
-                    <span className="history-partner">{account.name}</span>
-                  </td>
-                  <td>{accountTypeLabels[account.type]}</td>
-                  <td>{account.attachment}</td>
-                  <td>
-                    <span
-                      className={
-                        account.status === 'active'
-                          ? 'status-badge'
-                          : account.status === 'suspended'
-                            ? 'status-badge status-badge-warning'
-                            : 'status-badge status-badge-danger'
-                      }
-                    >
-                      {accountStatusLabels[account.status]}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="admin-requests-actions">
-                      <button
-                        className="admin-action"
-                        type="button"
-                        disabled={account.status === 'active'}
-                        onClick={() => setAccountStatus(account.name, 'active')}
-                      >
-                        Activer
-                      </button>
-                      <button
-                        className="admin-action-warning"
-                        type="button"
-                        disabled={account.status === 'suspended'}
-                        onClick={() =>
-                          setAccountStatus(account.name, 'suspended')
-                        }
-                      >
-                        Suspendre
-                      </button>
-                      <button
-                        className="admin-reject"
-                        type="button"
-                        disabled={account.status === 'closed'}
-                        onClick={() => setAccountStatus(account.name, 'closed')}
-                      >
-                        Clôturer
-                      </button>
-                    </div>
-                  </td>
+          {accountsLoading ? (
+            <p>Chargement des comptes…</p>
+          ) : (
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th scope="col">Compte</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">État</th>
+                  <th scope="col">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visibleAccounts.map((account) => {
+                  const isClosed = account.status === 'archived'
 
-          {visibleAccounts.length === 0 && (
+                  return (
+                    <tr key={`${account.type}-${account.id}`}>
+                      <td>
+                        <span className="history-partner">{account.name}</span>
+                      </td>
+                      <td>{accountTypeLabels[account.type]}</td>
+                      <td>{account.attachment}</td>
+                      <td>
+                        <span
+                          className={
+                            account.status === 'active'
+                              ? 'status-badge'
+                              : account.status === 'suspended'
+                                ? 'status-badge status-badge-warning'
+                                : 'status-badge status-badge-danger'
+                          }
+                        >
+                          {accountStatusLabels[account.status]}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-requests-actions">
+                          <button
+                            className="admin-action"
+                            type="button"
+                            disabled={
+                              account.status === 'active' ||
+                              isClosed ||
+                              updatingAccountId === account.id
+                            }
+                            onClick={() => handleUpdateStatus(account, 'active')}
+                          >
+                            Activer
+                          </button>
+
+                          <button
+                            className="admin-action-warning"
+                            type="button"
+                            disabled={
+                              account.status === 'suspended' ||
+                              isClosed ||
+                              updatingAccountId === account.id
+                            }
+                            onClick={() => handleUpdateStatus(account, 'suspended')}
+                          >
+                            Suspendre
+                          </button>
+
+                          <button
+                            className="admin-reject"
+                            type="button"
+                            disabled={
+                              isClosed ||
+                              updatingAccountId === account.id
+                            }
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Êtes-vous sûr de vouloir clôturer définitivement le compte de ${account.name} ? Cette action est irréversible.`,
+                                )
+                              ) {
+                                handleUpdateStatus(account, 'archived')
+                              }
+                            }}
+                          >
+                            Clôturer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {!accountsLoading && visibleAccounts.length === 0 && (
             <p className="admin-requests-empty">
               Aucun compte ne correspond à cette recherche.
             </p>
@@ -696,7 +788,7 @@ function Admin() {
               <h2 id="subsidy-employees-title">Salariés</h2>
             </div>
 
-            {employeesLoading ? (
+            {accountsLoading ? (
               <p>Chargement des salariés…</p>
             ) : (
               <table className="history-table admin-subsidy-table">
@@ -726,7 +818,7 @@ function Admin() {
               </table>
             )}
 
-            {!employeesLoading && visibleSubsidyEmployees.length === 0 && (
+            {!accountsLoading && visibleSubsidyEmployees.length === 0 && (
               <p className="admin-requests-empty">
                 Aucun salarié ne correspond à cette recherche.
               </p>

@@ -5,7 +5,7 @@
     "dev": "bun run --watch src/index.ts",
     "seed": "bun run src/scripts/seed.ts",
     "add_admin": "bun run helpers/register_admin.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "bun test"
   },
   "dependencies": {
     "@elysia/cors": "^1.4.2",

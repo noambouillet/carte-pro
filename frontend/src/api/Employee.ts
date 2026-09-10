@@ -1,5 +1,7 @@
 import api from "./AxiosConfig";
 
+const EMPLOYEE_BALANCE_CACHE_KEY = 'employee-balance'
+
 export interface RegisterEmployeePayload {
   first_name: string;
   last_name: string;
@@ -14,6 +16,38 @@ export interface EmployeeSummary {
   email: string;
   status: "active" | "inactive";
   createdAt: string;
+}
+
+interface EmployeeBalanceCache {
+  balanceCents: number
+  cachedAt: string
+}
+
+export function saveEmployeeBalance(balanceCents: number) {
+  localStorage.setItem(
+    EMPLOYEE_BALANCE_CACHE_KEY,
+    JSON.stringify({
+      balanceCents,
+      cachedAt: new Date().toISOString(),
+    })
+  )
+}
+
+export function getCachedEmployeeBalance(): EmployeeBalanceCache | null {
+  try {
+    const raw = localStorage.getItem(EMPLOYEE_BALANCE_CACHE_KEY)
+    if (!raw)
+      return null
+
+    const cache = JSON.parse(raw)
+
+    if (typeof cache.balanceCents !== 'number' || typeof cache.cachedAt !== 'string') {
+      return null
+    }
+    return cache
+  } catch {
+    return null
+  }
 }
 
 export async function registerEmployee(
@@ -38,7 +72,7 @@ export interface EmployeeTransaction {
   occurredAt: string;
   partnerId: string | null;
   partnerName: string | null;
-  partnerAddress: string | null;
+  partnerRegion: string | null;
   qrCodeId: string | null;
   amountCents: number;
   status: EmployeeTransactionStatus;

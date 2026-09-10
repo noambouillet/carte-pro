@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { database } from "../config/database";
-import { authPlugin, requireEmployee, requireActiveEmployee, hashPassword } from "../middleware/auth";
+import { authPlugin, requireEmployee, requireActiveEmployee, requireAdmin, hashPassword } from "../middleware/auth";
 import { qrJwtPlugin } from "../middleware/qr";
 import { employees, employeeBalances, transactionHistory, qrCodes, partners } from "../../db/drizzle/schema";
 
@@ -107,7 +107,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
           occurredAt: transactionHistory.occurredAt,
           partnerId: transactionHistory.partnerId,
           partnerName: partners.name,
-          partnerAddress: partners.address,
+          partnerRegion: partners.region,
           qrCodeId: transactionHistory.qrCodeId,
           amountCents: transactionHistory.amountCents,
           status: transactionHistory.status,
@@ -134,7 +134,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
           occurredAt: row.occurredAt,
           partnerId: row.partnerId !== null ? String(row.partnerId) : null,
           partnerName: row.partnerName,
-          partnerAddress: row.partnerAddress,
+          partnerRegion: row.partnerRegion,
           qrCodeId: row.qrCodeId !== null ? String(row.qrCodeId) : null,
           amountCents: Number(row.amountCents),
           status: row.status,
@@ -157,7 +157,7 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
                 t.String(),
                 t.Null(),
               ]),
-              partnerAddress: t.Union([
+              partnerRegion: t.Union([
                 t.String(),
                 t.Null(),
               ]),
@@ -206,4 +206,55 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
         tags: ["employee"],
       },
     }
-  );
+  )
+  .get("/:id/balance", async ({ params, set }) => {
+      const employeeId = Number(params.id);
+
+      if (!Number.isInteger(employeeId) || employeeId <= 0) {
+        set.status = 400;
+        return { error: "invalid_employee_id" };
+      }
+
+      const [row] = await database
+        .select({
+          balance: employeeBalances.balanceCents,
+        })
+        .from(employeeBalances)
+        .where(eq(employeeBalances.employeeId, employeeId))
+        .limit(1);
+
+      if (!row) {
+        set.status = 404;
+        return { error: "employee_not_found" };
+      }
+
+      return {
+        employeeId: String(employeeId),
+        balanceCents: Number(row.balance),
+      };
+    },
+    {
+      beforeHandle: requireAdmin,
+
+      params: t.Object({
+        id: t.String({ pattern: "^[0-9]+$" }),
+      }),
+
+      response: {
+        200: t.Object({
+          employeeId: t.String(),
+          balanceCents: t.Integer(),
+        }),
+        400: errorSchema,
+        401: errorSchema,
+        403: errorSchema,
+        404: errorSchema,
+      },
+
+      detail: {
+        summary: "Get employee balance",
+        description: "SIRH integration endpoint for retrieving an employee's balance.",
+        tags: ["SIRH"],
+      },
+    },
+  )  ;
