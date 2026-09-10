@@ -24,6 +24,7 @@ function QrScanner({ onScan, onClose }: QrScannerProps) {
 
     const videoElement: HTMLVideoElement = video
     const reader = new BrowserMultiFormatReader()
+    let cancelled = false
 
     readerRef.current = reader
     scannedRef.current = false
@@ -40,13 +41,20 @@ function QrScanner({ onScan, onClose }: QrScannerProps) {
           return
         }
 
-        const controls = await reader.decodeFromConstraints(
-          {
-            audio: false,
-            video: {
-              facingMode: { ideal: 'environment' },
-            },
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
           },
+        })
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+
+        const controls = await reader.decodeFromStream(
+          stream,
           videoElement,
           (result) => {
             if (!result || scannedRef.current)
@@ -64,6 +72,11 @@ function QrScanner({ onScan, onClose }: QrScannerProps) {
             onScan(value)
           },
         )
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
 
         controlsRef.current = controls
       } catch (caughtError) {
@@ -85,6 +98,7 @@ function QrScanner({ onScan, onClose }: QrScannerProps) {
     startScanner()
 
     return () => {
+      cancelled = true
       controlsRef.current?.stop()
       controlsRef.current = null
       readerRef.current = null
