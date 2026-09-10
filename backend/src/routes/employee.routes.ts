@@ -3,6 +3,7 @@ import { and, desc, eq, gte } from "drizzle-orm";
 import { database } from "../config/database";
 import { authPlugin, requireEmployee, requireActiveEmployee, requireAdmin, hashPassword } from "../middleware/auth";
 import { qrJwtPlugin } from "../middleware/qr";
+import { recordAudit, clientIp } from "../middleware/audit";
 import { employees, employeeBalances, transactionHistory, qrCodes, partners } from "../../db/drizzle/schema";
 
 const employeeStatusEnum = t.Union([t.Literal("active"), t.Literal("inactive")]);
@@ -11,7 +12,7 @@ const errorSchema = t.Object({ error: t.String() });
 export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
   .use(authPlugin)
   .use(qrJwtPlugin)
-  .post("/register", async ({ body, set }) => {
+  .post("/register", async ({ body, request, set }) => {
       const passwordHash = await hashPassword(body.password);
 
       try {
@@ -32,6 +33,15 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
             createdAt: employees.createdAt,
           });
 
+        await recordAudit(database, {
+          actorId: null,
+          actorRole: "anonymous",
+          action: "employee.created",
+          targetType: "employee",
+          targetId: employee.id,
+          payload: { email: employee.email },
+          ip: clientIp(request),
+        });
         set.status = 201;
         return { employee: { ...employee, id: String(employee.id) } };
       } catch (error: any) {

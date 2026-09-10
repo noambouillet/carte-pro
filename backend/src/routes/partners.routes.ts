@@ -3,6 +3,7 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { database } from "../config/database";
 import { partners, qrCodes, transactions } from "../../db/drizzle/schema";
 import { authPlugin, requireValidatedPartner, hashPassword } from "../middleware/auth";
+import { recordAudit, clientIp } from "../middleware/audit";
 import { qrJwtPlugin } from "../middleware/qr";
 
 const partnerStatusEnum = t.Union([t.Literal("pending"), t.Literal("validated"), t.Literal("rejected"), t.Literal("archived")]);
@@ -11,7 +12,7 @@ const errorSchema = t.Object({ error: t.String() });
 export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
   .use(authPlugin)
   .use(qrJwtPlugin)
-  .post("/register", async ({ body, set }) => {
+  .post("/register", async ({ body, request, set }) => {
       try {
         const passwordHash = await hashPassword(body.password);
 
@@ -41,6 +42,16 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
             status: partners.status,
             createdAt: partners.createdAt,
           });
+
+        await recordAudit(database, {
+          actorId: null,
+          actorRole: "anonymous",
+          action: "partner.created",
+          targetType: "partner",
+          targetId: partner.id,
+          payload: { email: partner.email, siren: partner.siren },
+          ip: clientIp(request),
+        });
 
         set.status = 201;
         return { partner: { ...partner, id: String(partner.id) } };
@@ -205,7 +216,7 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
       },
     }
   )
-  .post("/transactions", async ({ body, authUser, qrJwt, set }) => {
+  .post("/transactions", async ({ body, authUser, qrJwt, request, set }) => {
       const payload = await qrJwt.verify(body.qrToken).catch(() => null);
       if (!payload) {
         set.status = 400;
@@ -255,16 +266,42 @@ export const partnersRoutes = new Elysia({ prefix: "/api/v1/partners" })
         throw error;
       }
 
-      if (outcome.status === "refused_insufficient_balance") {
-        set.status = 402;
-        return { error: "insufficient_balance" };
-      }
+    if (outcome.status === "refused_insufficient_balance") {
+      await recordAudit(database, {
+        actorId: authUser!.id,
+        actorRole: "partner",
+        action: "transaction.refused",
+        targetType: "employee",
+        targetId: employeeId,
+        payload: {
+          amountCents: body.amountCents,
+          idempotencyKey: body.idempotencyKey,
+          reason: "insufficient_balance",
+        },
+        ip: clientIp(request),
+      });
+      set.status = 402;
+      return { error: "insufficient_balance" };
+    }
 
       const [t2] = await database
         .select()
         .from(transactions)
         .where(eq(transactions.id, outcome.transaction_id!));
 
+      await recordAudit(database, {
+        actorId: authUser!.id,
+        actorRole: "partner",
+        action: "transaction.approved",
+        targetType: "transaction",
+        targetId: t2.id,
+        payload: {
+          employeeId: t2.employeeId,
+          amountCents: t2.amountCents,
+          idempotencyKey: t2.idempotencyKey,
+        },
+        ip: clientIp(request),
+      });
       set.status = 201;
       return {
         transaction: {

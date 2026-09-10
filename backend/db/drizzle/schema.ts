@@ -1,4 +1,4 @@
-import { pgTable, index, unique, check, bigserial, text, char, timestamp, foreignKey, bigint, uniqueIndex, pgView, numeric, pgSequence, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, index, unique, check, bigserial, text, char, timestamp, foreignKey, bigint, uniqueIndex, pgView, numeric, pgSequence, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { customType } from "drizzle-orm/pg-core";
 
@@ -177,6 +177,23 @@ export const transactionAttempts = pgTable(
     check("transaction_attempts_amount_cents_check", sql`amount_cents > 0`),
   ],
 );
+
+export const auditLog = pgTable("audit_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true, precision: 3 })
+    .notNull()
+    .default(sql`clock_timestamp()`),
+  actorId: bigint("actor_id", { mode: "number" }),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(),
+  targetType: text("target_type"),
+  targetId: text("target_id"),
+  payload: jsonb("payload"),
+  ip: text("ip"),
+  prevHash: char("prev_hash", { length: 64 }).notNull().default(sql`''`),
+  recordHash: char("record_hash", { length: 64 }).notNull().default(sql`''`),
+});
+
 
 export const transactionReversals = pgTable(
   "transaction_reversals",
