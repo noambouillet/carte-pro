@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { database } from "../config/database";
 import { authPlugin, requireActiveEmployee, requireAdmin, hashPassword, clearSession } from "../middleware/auth";
 import { qrJwtPlugin } from "../middleware/qr";
@@ -191,18 +191,20 @@ export const employeeRoutes = new Elysia({ prefix: "/api/v1/employees" })
   )
   .post("/qrcode", async ({ authUser, qrJwt, set }) => {
       const jti = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-      await database.insert(qrCodes).values({
-        employeeId: authUser!.id,
-        token: jti,
-        expiresAt: expiresAt.toISOString(),
-      });
+      const [row] = await database
+        .insert(qrCodes)
+        .values({
+          employeeId: authUser!.id,
+          token: jti,
+          expiresAt: sql`now() + interval '5 minutes'`,
+        })
+        .returning({ expiresAt: qrCodes.expiresAt });
 
       const token = await qrJwt.sign({ employeeId: String(authUser!.id), jti });
 
       set.status = 201;
-      return { token, expiresAt: expiresAt.toISOString() };
+      return { token, expiresAt: row.expiresAt };
     },
     {
       beforeHandle: requireActiveEmployee,
