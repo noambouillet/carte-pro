@@ -49,3 +49,39 @@ Both need a `.env` file, copied from the matching `.env.example`.
   point at each other with the right scheme (`https://`), or requests will
   fail with a CORS error or a 502 from the Vite proxy.
 - Never commit a `.env` file. They hold real secrets and DB credentials.
+
+## Team
+
+Carte Pro was built as a team project at Epitech:
+
+- **Noam Bouillet**: backend lead and infrastructure
+- **Gaspard Bry**: frontend foundation, admin dashboard and backend tests
+- **Mato Urbanac**: frontend pages and front/back integration
+- **Baptiste Jaunais**: project documents and planning
+
+### My part (Noam Bouillet)
+
+Backend:
+
+- Designed the PostgreSQL schema (Drizzle) for payments, with transaction rollbacks and concurrency handling.
+- Built most of the REST API for the MVP (Bun + Elysia), with OpenAPI docs.
+- Authentication: JWT in `SameSite=Lax` cookies with a 2h lifetime, one login route for every role, and `/auth/me` for role lookup.
+- QR code payments signed with a JWT secret.
+- Audit logging middleware that records actions on every route.
+- `/:id/balance` endpoint for HR system (SIRH) integration.
+- Account deletion and archiving for employees and partners.
+- Deterministic seeding script (`bun seed`) with its own RNG.
+
+Infrastructure:
+
+- Local HTTPS for both apps with mkcert, and the Vite reverse proxy.
+- `run.sh`, which starts the database, the backend and the frontend with one command.
+- GitHub Actions workflow.
+
+Frontend:
+
+- Axios API layer for employees and partners.
+- Partner registration and the backend side of the partner dashboard.
+- Low-connectivity mode that caches the employee balance locally.
+
+Docs: SQL diagram, test and seeding docs, and legal documents (terms of use, accessibility statement, data processing register).
